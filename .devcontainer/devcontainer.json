@@ -1,0 +1,34 @@
+{
+  "name": "FP In Scala 2nd Edition (Red Book)",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/yohannes15/dev-features/neovim:1": {},
+    "ghcr.io/yohannes15/dev-features/sbt:1": {},
+    "ghcr.io/yohannes15/dev-features/coursier:1": {},
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17"
+    },
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "mounts": [
+    "source=${localEnv:HOME}/.config/nvim,target=/home/vscode/.config/nvim,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly",
+    "source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,readonly"
+  ],
+  "postCreateCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "scalameta.metals"
+      ],
+      "settings": {
+        "files.watcherExclude": {
+          "**/target/**": true
+        }
+      }
+    }
+  },
+  "forwardPorts": [8080],
+  "remoteUser": "vscode"
+}
