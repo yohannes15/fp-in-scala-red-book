@@ -1,5 +1,11 @@
 # Functional Programming in Scala 2nd Edition (Notes and Exercises)
 
+## Portfolio
+
+Working through the "Red Book" (Functional Programming in Scala, 2nd Edition) to learn pure functional programming concepts in Scala 3. Includes exercises, notes, and implementations of core FP abstractions like monads, functors, applicatives, and monoids from scratch.
+
+This repository tracks my journey learning functional programming foundations, with a focus on building intuition for effect systems, immutability, and composable abstractions. Each chapter includes annotated exercises and commentary on key concepts. Setup includes a devcontainer for easy cross-platform development.
+
 ## Quick Intro
 - Includes .devcontainer so you can open and run source code easily in any platform as long as you have Docker
 - Container also includes nvim if preferred.
