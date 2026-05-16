@@ -29,3 +29,16 @@ def factorial(n: Int): Int =
 A call is said to be in `tail position` if the caller does nothing other than return the value of the recursive call. For example. the recursive call to `go(n-1, n*acc)` is in tail position since the method returns the value of this recursive call directly and does nothing else with it. On the other hand, if we said `1 + go(n-1, n*acc)`, `go` would no longer be in tail position since the method would have more work to do when `go` returned its results (adding 1)
 
 
+If recursive calls made by a function are in tail position, Scala automatically compiles the recursion to iterative loops that don’t consume call stack frames for each iteration. By default, Scala doesn’t tell us if tail call elimination was successful, but if we’re expecting this to occur for a recursive function we write, we can tell Scala compiler about this assumption using the tailrec annotation so it can give us a compile error if it’s unable to eliminate the tail calls of the function. Here’s the syntax for this:
+
+
+```scala
+def factorial(n: Int): Int =
+  @annotation.tailrec
+  def ifFunctionNotTailRecCompilerErrors(n: Int, acc: Int): Int =
+    ???
+
+  go(n, 1)
+```
+
+### ...
