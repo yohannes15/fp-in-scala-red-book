@@ -29,6 +29,5 @@
       }
     }
   },
-  "forwardPorts": [8080],
-  "remoteUser": "vscode"
+  "forwardPorts": [8099]
 }
