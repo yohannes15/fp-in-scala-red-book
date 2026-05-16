@@ -25,6 +25,7 @@ package chapter2.exercises
     *   The Fibonacci number immediately following current
     * @return
     */
+  @annotation.tailrec
   def go(n: Int, current: Int, next: Int): Int =
     if (n <= 0) current
     else go(n - 1, next, current + next)
