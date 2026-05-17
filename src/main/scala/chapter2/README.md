@@ -66,4 +66,24 @@ def factorial(n: Int): Int =
   go(n, 1)
 ```
 
-### ...
+### Polymorphic Functions
+If a function is polymorphic in some type `A`, the only operations that can be performed on that `A` are those passed into the function as arguments. In some cases, you’ll find that the universe of possibilities for a given polymorphic type is constrained such that only one implementation is possible!
+
+Often, and especially when writing higher-order functions, we want to write code that works for any type it’s given. These are called polymorphic functions. The type parameter list introduces type variables that can be referenced in the rest of the type signature (exactly analogous to how variables introduced in the parameter list to a function can be referenced in the body of the function)
+
+```scala
+/** Example of a function signature that can only be implemented 
+* in one way. A higher-order function that takes a function of two
+arguments and partially applies it. That is, if we have an A and a
+fn that needs both A and B to produce C, we can get a function that
+just needs B to produce C (since we already have the A). 
+
+In simple terms -> "If I can give you a (C)arrot for an (A)pple and
+a (B)anana, and you already gave me an (A)pple, you just have to give
+me a (B)anana, and I'll give you a (C)arrot"
+*/
+def partial1[A, B, C](a: A, f: (A, B) => C): B => C =
+  b => f(a, b)
+```
+
+
