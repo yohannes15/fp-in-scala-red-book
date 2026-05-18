@@ -6,11 +6,11 @@ package chapter2.exercises
   * implementation:
   *
   * Note the type A => (B => C) can be read as a function that takes an A and
-  * returns a new function from B to C.
+  * returns a new function from B to C. Also as A => B => C
   */
 @main def implementCurry: Unit =
   def curry[A, B, C](f: (A, B) => C): A => (B => C) =
-    (a: A) => ((b: B) => f(a, b))
+    a => (b => f(a, b))
 
   val curriedGreaterThanFunc = curry((x: Int, y: Int) => x > y)
   // curriedGreaterThanFunc: Int => Int => Boolean
