@@ -40,6 +40,11 @@ Each data constructor also introduces a pattern that can be used for pattern mat
 
 ### Pattern Matching
 
+Pattern matching works a bit like a fancy switch statement that may descend into the structure of the expression it examines and extract subexpressions of that structure. It’s introduced with an expression (the target or scrutinee) like `ds` followed by the keyword `match` and a sequence of `case`s.
+
+Scala is often, but **NOT** always, able to determine at compile time if a match expression does not cover all cases. In such cases, the compiler reports a warning. Otherwise you get a runtime `MatchError`
+
+A pattern matches the target if there exists an assignment of variables in the pattern to subexpressions of the target that make it structurally equivalent to the target. The resulting expression for a matching case will then have access to these variable assignments in its local scope.
 
 ## Misc Notes
 
@@ -83,3 +88,11 @@ List("a", "b") == Cons("a", Cons("b", Nil))
 Scala generates a default `def toString: String` method for enumerations, which can be convenient for debugging. You can see the output of this default toString implementation if you experiment with List values in the REPL, which uses toString to render the result of each expression. 
 
 `List.Cons(1, List.Nil)` will be printed as the string "Cons(1, Nil)", for instance. But note that the generated toString will be naively recursive and will cause stack overflow when printing long lists, so you may wish to provide a different implementation.
+
+---
+
+A common convention is to use `xs, ys, as, or bs` as variable names for a sequence of some sort and `x, y, a, or b` as the name for a single element of a sequence. Another common naming convention is `h or hd` for the first element of a list (the head of the list), `t or tl` for the remaining elements (the tail), and `l` for an entire list.
+
+---
+
+Companion objects have access to private and protected members of the type with the same name but are otherwise like any other object.
