@@ -92,6 +92,10 @@ def partial1[A, B, C](a: A, f: (A, B) => C): B => C =
 This is named after the mathematician Haskell Curry, who discovered the principle. It was independently discovered earlier by Moses Schoenfinkel. Currying converts a function `f` of two arguments into another function `g` of one argument that partially applies `f`.
 
 ```scala
-// look at exercise 2.3 to see implementation
+// look at exercise 2.3/2.4 to see implementation.
+// Since => associates to the right, both of these signatures are identical
 def curry[A, B, C](f: (A, B) => C): A => (B => C) = ???
+def curry[A, B, C](f: (A, B) => C): A => B => C = ???
+
+def uncurry[A, B, C](f: A => B => C): (A, B) => C = ???
 ```
