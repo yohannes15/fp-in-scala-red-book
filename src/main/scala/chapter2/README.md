@@ -67,6 +67,7 @@ def factorial(n: Int): Int =
 ```
 
 ### Polymorphic Functions
+
 If a function is polymorphic in some type `A`, the only operations that can be performed on that `A` are those passed into the function as arguments. In some cases, you’ll find that the universe of possibilities for a given polymorphic type is constrained such that only one implementation is possible!
 
 Often, and especially when writing higher-order functions, we want to write code that works for any type it’s given. These are called polymorphic functions. The type parameter list introduces type variables that can be referenced in the rest of the type signature (exactly analogous to how variables introduced in the parameter list to a function can be referenced in the body of the function)
@@ -86,4 +87,11 @@ def partial1[A, B, C](a: A, f: (A, B) => C): B => C =
   b => f(a, b)
 ```
 
+### Currying
 
+This is named after the mathematician Haskell Curry, who discovered the principle. It was independently discovered earlier by Moses Schoenfinkel. Currying converts a function `f` of two arguments into another function `g` of one argument that partially applies `f`.
+
+```scala
+// look at exercise 2.3 to see implementation
+def curry[A, B, C](f: (A, B) => C): A => (B => C) = ???
+```
