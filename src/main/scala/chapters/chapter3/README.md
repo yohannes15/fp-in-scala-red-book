@@ -62,13 +62,9 @@ For data types, it’s a common idiom to have a variadic apply method in the com
 Variadic functions just provide a little syntactic sugar for creating and passing a Seq of elements explicitly. [http://mng.bz/f4k9](Seq) is the interface in Scala’s collections library implemented by sequence-like data structures, such as lists, queues, and vectors. Contains the `head` and `tail`. The `*` passes a `Seq` to the variadic method. 
 
 ```scala
-def printNames(names: String*): Unit = {
+def printNames(names: String*): Unit = 
   names.foreach(println)
-}```
 
-You can pass any number of comma-separated arguments, and the compiler handles the rest
-
-```scala
 printNames("Alice", "Bob") 
 printNames("Charlie") 
 printNames() // Allowed, passes an empty sequence
