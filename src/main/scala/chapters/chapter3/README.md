@@ -59,7 +59,7 @@ When you place * after a type in a parameter declaration (e.g., `String*`), Scal
 
 For data types, it’s a common idiom to have a variadic apply method in the companion object to conveniently construct instances of the data type.
 
-Variadic functions just provide a little syntactic sugar for creating and passing a Seq of elements explicitly. [http://mng.bz/f4k9](Seq) is the interface in Scala’s collections library implemented by sequence-like data structures, such as lists, queues, and vectors. Contains the `head` and `tail`. The `*` passes a `Seq` to the variadic method. 
+Variadic functions just provide a little syntactic sugar for creating and passing a Seq of elements explicitly. [Seq](http://mng.bz/f4k9) is the interface in Scala’s collections library implemented by sequence-like data structures, such as lists, queues, and vectors. Contains the `head` and `tail`. The `*` passes a `Seq` to the variadic method. 
 
 ```scala
 def printNames(names: String*): Unit = 
