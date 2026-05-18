@@ -68,6 +68,8 @@ def factorial(n: Int): Int =
 
 ### Polymorphic Functions
 
+Also known as Generic functions. These are functions that use >= 1 type parameters in their signature, allowing them to operate on many types. Monomorphic functions have no type parameters and have static type defintion.
+
 If a function is polymorphic in some type `A`, the only operations that can be performed on that `A` are those passed into the function as arguments. In some cases, you’ll find that the universe of possibilities for a given polymorphic type is constrained such that only one implementation is possible!
 
 Often, and especially when writing higher-order functions, we want to write code that works for any type it’s given. These are called polymorphic functions. The type parameter list introduces type variables that can be referenced in the rest of the type signature (exactly analogous to how variables introduced in the parameter list to a function can be referenced in the body of the function)
@@ -99,3 +101,29 @@ def curry[A, B, C](f: (A, B) => C): A => B => C = ???
 
 def uncurry[A, B, C](f: A => B => C): (A, B) => C = ???
 ```
+
+### Composition
+
+Function composition feeds the output of one function to the input of another function.
+
+```scala
+def compose[A, B, C](f: B => C, g: A => B): A => C = ???
+```
+
+Composition is essential thus Scala's standard library provides `compose` as a method on `Function1` (interface for functions that take one argument). To compose two functions, `f` and `g`, we say `f compose g`. It also provides an `andThen` method. `f andThen g`.
+
+```scala
+val f = (x: Double) => math.Pi / 2 - x
+// f: Double => Double
+ 
+val cos = f andThen math.sin
+// cos: Double => Double
+```
+
+HOF functions like `compose` don't care whether they're operating on huge functions backed by millions of lines of code or functions that are simple one-liners.
+
+### Conclusion and Summary
+
+Polymorphic, HOF functions often end up being extremely widely applicable, precisely because they say nothing about any particular domain and are simply abstracting over a common pattern that occurs in many contexts. 
+
+Implementations of polymorphic functions are often significantly constrained such that we can often simply follow the types to the correct implementation. This is called **Following types to implementations** or **type-driven development**
