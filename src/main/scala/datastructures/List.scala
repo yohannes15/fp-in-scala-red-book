@@ -35,7 +35,6 @@ object List:
 
   def product(doubles: List[Double]): Double = doubles match
     case Nil          => 1.0
-    case Cons(0.0, _) => 0.0
     case Cons(x, xs)  => x * product(xs)
 
   def tail[A](as: List[A]): List[A] = as match
@@ -53,3 +52,23 @@ object List:
       as match
         case Nil           => as
         case Cons(_, tail) => drop(tail, n - 1)
+
+  def dropWhile[A](as: List[A], f: A => Boolean): List[A] = as match
+    case Cons(h, tl) if f(h) => dropWhile(tl, f)
+    case _                   => as
+
+  /** Note that this definition only copies values until the first list is
+    * exhausted, so its runtime and memory usage are determined only by the
+    * length of a1. The remaining list then just points to a2. If we were to
+    * implement this same function for two arrays, we’d be forced to copy all
+    * the elements in both arrays into the result. In this case, the immutable
+    * linked list is much more efficient than an array!
+    */
+  def append[A](a1: List[A], a2: List[A]): List[A] =
+    a1 match
+      case Nil        => a2
+      case Cons(h, t) => Cons(h, append(t, a2))
+
+  /** returns the list but with the last element removed */
+  def init[A](as: List[A]): List[A] =
+    ???

@@ -54,6 +54,10 @@ When we add an element 1 to the front of an existing list say `xs`, we return a 
 
 In the same way, to remove an element from the front of a list `val mylist = Cons(x, xs)`, we simply return its tail, `xs`. There's no real removing going on :) The original list, is still available and unharmed. Functional data structures are persistent, meaning existing references are never changed by operations on the data strucutre.
 
+Writing purely functional data structures that support different operations efficiently is all about finding clever ways to exploit data sharing. 
+
+As an example of what’s possible, in the Scala standard library, there’s a purely functional sequence implementation, [Vector](http://mng.bz/aZqm), with constant-time random access, updates, head, tail, init, and effectively constant-time additions to either the front or rear of the sequence.
+
 ```scala
 val l1 = List("a", "b", "c", "d")
 val l2 = l1.tail // b -> rest
