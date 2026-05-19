@@ -46,6 +46,24 @@ Scala is often, but **NOT** always, able to determine at compile time if a match
 
 A pattern matches the target if there exists an assignment of variables in the pattern to subexpressions of the target that make it structurally equivalent to the target. The resulting expression for a matching case will then have access to these variable assignments in its local scope.
 
+### Data Sharing
+
+When data is immutable, how do we write functions that, for ex, add or remove elements from a list? 
+
+When we add an element 1 to the front of an existing list say `xs`, we return a new list - in this case, `Cons(1, xs)`. Since lists are immutable, we don't need to actually copy `xs`, we can just reuse it. This is called **data sharing**. Sharing of immutable data lets us implement functions more efficiently; we can always return immutable data strucutres without having to worry about subsequent code modifiying our data.
+
+In the same way, to remove an element from the front of a list `val mylist = Cons(x, xs)`, we simply return its tail, `xs`. There's no real removing going on :) The original list, is still available and unharmed. Functional data structures are persistent, meaning existing references are never changed by operations on the data strucutre.
+
+```scala
+val l1 = List("a", "b", "c", "d")
+val l2 = l1.tail // b -> rest
+l1.tail == l2
+// Both lists share the same data in memory. .tail doesn't modify l1. 
+// It simply references  the tail of the original list. 
+// Defense copying not needed. List is immutable
+```
+
+
 ## Misc Notes
 
 ### Variance

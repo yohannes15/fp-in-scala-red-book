@@ -37,3 +37,11 @@ object List:
     case Nil          => 1.0
     case Cons(0.0, _) => 0.0
     case Cons(x, xs)  => x * product(xs)
+
+  def tail[A](as: List[A]): List[A] = as match
+    case Cons(_, tl) => tl
+    case Nil => throw new UnsupportedOperationException("tail of empty list")
+
+  def setHead[A](as: List[A], a: A): List[A] = as match
+    case Nil => Cons(a, Nil)
+    case l   => Cons(a, l)
