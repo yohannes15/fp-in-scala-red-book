@@ -42,6 +42,14 @@ object List:
     case Cons(_, tl) => tl
     case Nil => throw new UnsupportedOperationException("tail of empty list")
 
-  def setHead[A](as: List[A], a: A): List[A] = as match
-    case Nil => Cons(a, Nil)
-    case l   => Cons(a, l)
+  def setHead[A](as: List[A], h: A): List[A] = as match
+    case Nil =>
+      throw new UnsupportedOperationException("set head of empty list")
+    case Cons(_, tl) => Cons(h, tl)
+
+  def drop[A](as: List[A], n: Int): List[A] =
+    if n <= 0 then as
+    else
+      as match
+        case Nil           => as
+        case Cons(_, tail) => drop(tail, n - 1)
