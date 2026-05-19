@@ -34,8 +34,8 @@ object List:
     case Cons(x, xs) => x + sum(xs)
 
   def product(doubles: List[Double]): Double = doubles match
-    case Nil          => 1.0
-    case Cons(x, xs)  => x * product(xs)
+    case Nil         => 1.0
+    case Cons(x, xs) => x * product(xs)
 
   def tail[A](as: List[A]): List[A] = as match
     case Cons(_, tl) => tl
@@ -69,6 +69,14 @@ object List:
       case Nil        => a2
       case Cons(h, t) => Cons(h, append(t, a2))
 
-  /** returns the list but with the last element removed */
-  def init[A](as: List[A]): List[A] =
-    ???
+  /** returns the list but with the last element removed. The runtime of init is
+    * proportional to the length of the list. Furthermore, we have to build up a
+    * copy of the entire list, as there's no structural sharing between the
+    * initial list and the result of init. Finally this implementation uses a
+    * stack frame for each element of the list, leading to potential stack
+    * overflow errors.
+    */
+  def init[A](as: List[A]): List[A] = as match
+    case Nil => throw new UnsupportedOperationException("init of empty list")
+    case Cons(_, Nil) => Nil
+    case Cons(h, tl)  => Cons(h, init(tl))

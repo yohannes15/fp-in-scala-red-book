@@ -58,6 +58,8 @@ Writing purely functional data structures that support different operations effi
 
 As an example of what’s possible, in the Scala standard library, there’s a purely functional sequence implementation, [Vector](http://mng.bz/aZqm), with constant-time random access, updates, head, tail, init, and effectively constant-time additions to either the front or rear of the sequence.
 
+If we look at `init` on list which returns list but with last element removed, we have to build up a copy of the entire list, as there's no structural sharing between the initial list and the result of init. Finally the implementation uses a stack frame for each element of the list, leading to potential stack overflow errors.
+
 ```scala
 val l1 = List("a", "b", "c", "d")
 val l2 = l1.tail // b -> rest
@@ -66,6 +68,8 @@ l1.tail == l2
 // It simply references  the tail of the original list. 
 // Defense copying not needed. List is immutable
 ```
+
+### Recursion over lists and generalizing to HOFs
 
 
 ## Misc Notes
