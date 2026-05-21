@@ -37,6 +37,11 @@ object List:
     case Nil         => 1.0
     case Cons(x, xs) => x * product(xs)
 
+  def foldRight[A, B](as: List[A], acc: B, f: (A, B) => B): B =
+    as match
+      case Nil         => acc
+      case Cons(x, xs) => f(x, foldRight(xs, acc, f))
+
   def tail[A](as: List[A]): List[A] = as match
     case Cons(_, tl) => tl
     case Nil => throw new UnsupportedOperationException("tail of empty list")
@@ -80,3 +85,6 @@ object List:
     case Nil => throw new UnsupportedOperationException("init of empty list")
     case Cons(_, Nil) => Nil
     case Cons(h, tl)  => Cons(h, init(tl))
+
+  def length[A](as: List[A]): Int =
+    foldRight(as, 0, (_, acc) => acc + 1)

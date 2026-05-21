@@ -15,7 +15,7 @@ import datastructures.List
     // order matters even if this matches above is the result
     case Cons(h, t) => h + sum(t)
     // Doesn't reach here as well
-    case _ => 101
+    case null => 101
 
   /* ANSWER IS 3. The x + y path*/
   print(result)

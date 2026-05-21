@@ -71,6 +71,25 @@ l1.tail == l2
 
 ### Recursion over lists and generalizing to HOFs
 
+`foldRight` is not specific to any one type of element, and we discover while generalizing that the value that’s returned doesn’t have to be of the same type as the elements of the list! One way of describing what `foldRight` does is that it replaces the constructors of the list, `Nil` and `Cons`, with `acc` and `f`.
+
+```scala
+Cons(1, Cons(2, Nil))
+f   (1, f   (2, acc))
+```
+
+```scala
+
+foldRight(Cons(1, Cons(2, Cons(3, Nil))), 0, (x,y) => x + y)
+1 + foldRight(Cons(2, Cons(3, Nil)), 0, (x,y) => x + y)      // ①
+1 + (2 + foldRight(Cons(3, Nil), 0, (x,y) => x + y))
+1 + (2 + (3 + (foldRight(Nil, 0, (x,y) => x + y))))
+1 + (2 + (3 + (0)))
+6
+// ① Replace foldRight with its definition.
+```
+
+Note that foldRight must traverse all the way to the end of the list (pushing frames onto the call stack as it goes) before it can begin collapsing it. 
 
 ## Misc Notes
 
