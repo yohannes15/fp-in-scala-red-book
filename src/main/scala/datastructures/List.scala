@@ -41,22 +41,22 @@ object List:
   def reverse[A](as: List[A]): List[A] =
     foldLeft(as, Nil, (acc, a) => Cons(a, acc))
 
-  def foldRight[A, B](as: List[A], acc: B, f: (A, B) => B): B =
+  def foldRightNonStackSafe[A, B](as: List[A], acc: B, f: (A, B) => B): B =
     as match
       case Nil         => acc
       case Cons(x, xs) => f(x, foldRight(xs, acc, f))
+
+  /** Reverse the input list and then foldLeft with the result, flipping the
+    * order of the parameters passed to the combining function
+    */
+  def foldRight[A, B](as: List[A], acc: B, f: (A, B) => B): B =
+    foldLeft(reverse(as), acc, (acc, a) => f(a, acc))
 
   @annotation.tailrec
   def foldLeft[A, B](as: List[A], acc: B, f: (B, A) => B): B =
     as match
       case Nil         => acc
       case Cons(h, tl) => foldLeft(tl, f(acc, h), f)
-
-  /** Reverse the input list and then foldLeft with the result, flipping the
-    * order of the parameters passed to the combining function
-    */
-  def foldRightViaFoldLeft[A, B](as: List[A], acc: B, f: (A, B) => B): B =
-    foldLeft(reverse(as), acc, (acc, a) => f(a, acc))
 
   def tail[A](as: List[A]): List[A] = as match
     case Cons(_, tl) => tl
@@ -95,3 +95,6 @@ object List:
     case Nil => throw new UnsupportedOperationException("init of empty list")
     case Cons(_, Nil) => Nil
     case Cons(h, tl)  => Cons(h, init(tl))
+
+  def map[A, B](as: List[A], f: A => B): List[B] =
+    foldRight(as, Nil, (a, acc) => Cons(f(a), acc))
