@@ -182,6 +182,21 @@ In this example, ("Bob", 42) is a pair whose type is (String, Int), which is syn
 
 ## Misc Notes
 
+### Extension Methods
+
+Can we use method syntax (aka dot notation) to define methods for a more specific type? Example `size` method on `Tree` is defined for every tree, regardless of the type the tree is instantitied with. Consider a function defined for `Tree[Int]` instead that returns the first positive integer in the tree (or, if none exists, returns the last visited value).
+
+If we try to define this function as a method on `Tree`, it won't work becuse `this` is a `Tree[A]`. Instead we can define `firstPositive` as an extension method on any `Tree[Int]`:
+
+```scala
+extension (t: Tree[Int])
+  def firstPositive: Int = ???
+  ...
+```
+This says that for any `Tree[Int]`, there exists a method named `firstPositive`, which takes no arguments and returns an Int. The definition of firstPositive can reference the tree on which it was called as the value `t` due to the `(t: Tree[Int])` clause after the extension keyword—just like a regular method can reference `this`.
+
+When the compiler sees an expression like `myTree.firstPositive`, it will notice that there is no regular method named `firstPositive` and search for an extension method with that name. The search is limited to specific locations, so we need to define extension methods in one of those locations. In this case, we’ll put the `firstPositive` extension method into the companion object for `Tree`. Extension methods defined in the companion are **always available** to callers. [More details on extension method syntax](https://nightly.scala-lang.org/docs/reference/contextual/extension-methods.html)
+
 ### Variance
 
 `+A` in `List[+A]` means `List` is covariant in its element type. If `Cat` is a subtype of `Animal`, then `List[Cat]` is also a subtype of `List[Animal]`.
