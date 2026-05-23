@@ -38,6 +38,34 @@ val ex3: List[String] = List.Cons("a", List.Cons("b", List.Nil))
 
 Each data constructor also introduces a pattern that can be used for pattern matching, as in the functions `sum` and `product`
 
+### List
+
+List exists in Scala standard library and in subsequent chapters we'll use that. The main difference betweent the `List` developed in datastructures/List.scala and the standard library version is that `Cons` is called `::`, which associates to the right, so: 
+
+```scala
+1 :: 2 :: Nil == 1 :: (2 :: Nil) == List(1, 2)
+```
+
+When pattern matching, `case Cons(h, t)` becomes `case h :: t`, which avoids having to nest parentheses if writing a pattern like `case h :: h2 :: t` to extract more than just the first element of the list.
+
+There are a number of other useful methods on the standard library lists. These are defined as methods on `List[A]` rather than as standalone functions.
+
+- `def take(n: Int): List[A]` - returns a list consisting of the first n elements of this.
+
+- `def takeWhile(f: A => Boolean): List[A]` - returns a list consisting of the longest valid prefix of this whose elements all pass the predicate f.
+
+- `def forall(f: A => Boolean): Boolean` - returns true if and only if all elements of this pass the predicate f.
+
+- `def exists(f: A => Boolean): Boolean` - returns true if any element of this passes the predicate f.
+
+- `scanLeft` and `scanRight` - These are similar to foldLeft and foldRight, but they return the List of partial results rather than just the final accumulated value.
+
+Look at the Scala API documentation to see what other functions there are. If you find yourself writing an explicit recursive function for doing some sort of list manipulation, check the List API to see if something like the function you need already exists.
+
+**Loss of efficiency when assembling list functions from simpler components**
+
+One of the problems with `List` is that although we often express operations and algorithms in terms of general-purpose functions, the resulting implementation isn’t always efficient. we may end up making multiple passes over the same input or else have to write explicit recursive loops to allow early termination.
+
 ### Pattern Matching
 
 Pattern matching works a bit like a fancy switch statement that may descend into the structure of the expression it examines and extract subexpressions of that structure. It’s introduced with an expression (the target or scrutinee) like `ds` followed by the keyword `match` and a sequence of `case`s.
