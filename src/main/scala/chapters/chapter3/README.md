@@ -157,6 +157,29 @@ append(xs, ys) = foldLeft(reverse(xs), ys, (acc, a) => Cons(a, acc))
 
 This pattern (reverse then foldLeft) is how `foldRightViaFoldLeft` works in `List.scala` — it gives us the right-to-left semantics of `foldRight` with the stack safety of `foldLeft`.
 
+## ADT
+
+A datatype defined by one or more data constructors, each of which may contain zero or more arguments. The datatype is the sum/union of its data constructors, and each data constructor is the product of its arguments.
+
+The naming is not coincidental. There’s a deep connection, beyond the scope of this book, between the “addition” and “multiplication” of types to form an ADT and the addition and multiplication of numbers. Algebraic data types can be used to define other data structures. (Example: List, Binary Tree ...)
+
+## Tuple in Scala
+
+Pairs and tuples of higher arities (e.g., triples) are also algebraic data types. They work justlike the ADTs we’ve been writing here but have special syntax:
+
+```scala
+scala> val p = ("Bob", 42)
+val p: (String, Int) = (Bob,42)
+scala> p(0)
+val res0: String = Bob
+scala> p(1)
+val res1: Int = 42
+scala> p match { case (a, b) => b }
+val res2: Int = 42
+```
+
+In this example, ("Bob", 42) is a pair whose type is (String, Int), which is syntactic sugar for`Tuple2[String, Int]`. We can extract the first or second element of this pair by index, and we can pattern match on this pair much like any other case class. If we try passing an invalid index—e.g., 3 or -1—we get a **compilation error, not a runtime** error. Higher arity tuples work similarly.
+
 ## Misc Notes
 
 ### Variance
@@ -207,3 +230,7 @@ A common convention is to use `xs, ys, as, or bs` as variable names for a sequen
 ---
 
 Companion objects have access to private and protected members of the type with the same name but are otherwise like any other object.
+
+---
+
+In Scala, all methods whose names end in : are right associative. That is, the expression `x :: xs` is actually the method call `xs.::(x)`, which in turn calls the data constructor `::(x,xs)`.
