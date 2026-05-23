@@ -81,6 +81,9 @@ object List:
   def append[A](xs: List[A], ys: List[A]): List[A] =
     foldRight(xs, ys, Cons(_, _))
 
+  def concat[A](l: List[List[A]]): List[A] =
+    foldRight(l, Nil: List[A], append)
+
   /** returns the list but with the last element removed. The runtime of init is
     * proportional to the length of the list. Furthermore, we have to build up a
     * copy of the entire list, as there's no structural sharing between the
