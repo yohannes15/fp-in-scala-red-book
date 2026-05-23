@@ -106,3 +106,30 @@ object List:
   def flatMap[A, B](as: List[A], f: A => List[B]): List[B] =
     // foldRight(as, Nil, (a, acc) => append(f(a), acc))
     concat(map(as, f))
+
+  def zipWithNonStackSafe[A, B, C](
+      a: List[A],
+      b: List[B],
+      f: (A, B) => C
+  ): List[C] =
+    (a, b) match
+      case (Nil, _) | (_, Nil)          => Nil
+      case (Cons(h1, t1), Cons(h2, t2)) =>
+        Cons(f(h1, h2), zipWithNonStackSafe(t1, t2, f))
+
+  /** To make this stack safe, we can pass the accumulated value into our
+    * recursive call instead of first recursing and then using the result in
+    * subsequent computation
+    */
+  def zipWith[A, B, C](a: List[A], b: List[B], f: (A, B) => C): List[C] =
+    @annotation.tailrec
+    /** When we recurse, we pass Cons(f(h1, h2), acc) as the new accumulator. By
+      * doing so, our accumulator ends up in reverse order, so we reverse the
+      * answer before returning from zipWith.
+      */
+    def loop(a: List[A], b: List[B], acc: List[C]): List[C] =
+      (a, b) match
+        case (Nil, _) | (_, Nil)          => Nil
+        case (Cons(h1, t1), Cons(h2, t2)) => loop(t1, t2, Cons(f(h1, h2), acc))
+
+    reverse(loop(a, b, Nil))
