@@ -46,6 +46,12 @@ object List:
       case Nil         => acc
       case Cons(x, xs) => f(x, foldRight(xs, acc, f))
 
+  /** Reverse the input list and then foldLeft with the result, flipping the
+    * order of the parameters passed to the combining function
+    */
+  def foldRightViaFoldLeft[A, B](as: List[A], acc: B, f: (A, B) => B): B =
+    foldLeft(reverse(as), acc, (acc, a) => f(a, acc))
+
   @annotation.tailrec
   def foldLeft[A, B](as: List[A], acc: B, f: (B, A) => B): B =
     as match
