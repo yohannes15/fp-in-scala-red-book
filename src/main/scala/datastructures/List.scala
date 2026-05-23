@@ -100,4 +100,9 @@ object List:
     foldRight(as, Nil, (a, acc) => Cons(f(a), acc))
 
   def filter[A](as: List[A], f: A => Boolean): List[A] =
-    foldRight(as, Nil, (a, acc) => if f(a) then Cons(a, acc) else acc)
+    // foldRight(as, Nil, (a, acc) => if f(a) then Cons(a, acc) else acc)
+    flatMap(as, a => if f(a) then List(a) else Nil)
+
+  def flatMap[A, B](as: List[A], f: A => List[B]): List[B] =
+    // foldRight(as, Nil, (a, acc) => append(f(a), acc))
+    concat(map(as, f))
