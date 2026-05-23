@@ -10,13 +10,15 @@ enum Tree[+A]:
     case Branch(l, r) => l.size + r.size
 
 object Tree:
-  /** extension methods for a more specific type! */
+  /** extension methods for a more specific type! Tree[Int] */
   extension (t: Tree[Int])
-    /** returns the first positive integer in the tree. if none exists, returns
-      * the last visited value.
-      */
+    /** 1st positive integer in the tree, else the last visited value. */
     def firstPositive: Int = t match
-      case Leaf(i)      => i
+      case Leaf(n)      => n
       case Branch(l, r) =>
         val lpos = l.firstPositive
         if lpos > 0 then lpos else r.firstPositive
+
+    def maximum: Int = t match
+      case Leaf(n)      => n
+      case Branch(l, r) => l.maximum max r.maximum
