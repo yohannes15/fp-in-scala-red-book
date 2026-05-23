@@ -1,5 +1,7 @@
 package datastructures
 
+import scala.annotation.tailrec
+
 /** A singly linked list.
   *
   * NOTE: List is parameterized on a type, A, as a result the data constructors
@@ -52,7 +54,7 @@ object List:
   def foldRight[A, B](as: List[A], acc: B, f: (A, B) => B): B =
     foldLeft(reverse(as), acc, (acc, a) => f(a, acc))
 
-  @annotation.tailrec
+  @tailrec
   def foldLeft[A, B](as: List[A], acc: B, f: (B, A) => B): B =
     as match
       case Nil         => acc
@@ -122,7 +124,7 @@ object List:
     * subsequent computation
     */
   def zipWith[A, B, C](a: List[A], b: List[B], f: (A, B) => C): List[C] =
-    @annotation.tailrec
+    @tailrec
     /** When we recurse, we pass Cons(f(h1, h2), acc) as the new accumulator. By
       * doing so, our accumulator ends up in reverse order, so we reverse the
       * answer before returning from zipWith.
@@ -140,13 +142,13 @@ object List:
     * if not, we recurse on our tail, checking if the tail has sub as a
     * subsequence.
     */
-  @annotation.tailrec
+  @tailrec
   def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = sup match
     case Nil                       => sub == Nil
     case _ if startsWith(sup, sub) => true
     case Cons(h, t)                => hasSubsequence(t, sub)
 
-  @annotation.tailrec
+  @tailrec
   /** recurse on the structure of both lists. If the prefix is Nil, then l
     * trivially starts with prefix. Otherwise, we check if the head of l is
     * equal to the head of prefix and, if so, recurse on the tails
