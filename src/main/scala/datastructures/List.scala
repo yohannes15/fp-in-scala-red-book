@@ -29,18 +29,25 @@ object List:
     if as.isEmpty then Nil
     else Cons(as.head, apply(as.tail*))
 
-  def sum(ints: List[Int]): Int = ints match
-    case Nil         => 0
-    case Cons(x, xs) => x + sum(xs)
+  def sum(ints: List[Int]): Int =
+    foldLeft(ints, 0, _ + _)
 
-  def product(doubles: List[Double]): Double = doubles match
-    case Nil         => 1.0
-    case Cons(x, xs) => x * product(xs)
+  def product(doubles: List[Double]): Double =
+    foldLeft(doubles, 0, _ * _)
+
+  def length[A](as: List[A]): Int =
+    foldLeft(as, 0, (acc, _) => acc + 1)
 
   def foldRight[A, B](as: List[A], acc: B, f: (A, B) => B): B =
     as match
       case Nil         => acc
       case Cons(x, xs) => f(x, foldRight(xs, acc, f))
+
+  @annotation.tailrec
+  def foldLeft[A, B](as: List[A], acc: B, f: (B, A) => B): B =
+    as match
+      case Nil         => acc
+      case Cons(h, tl) => foldLeft(tl, f(acc, h), f)
 
   def tail[A](as: List[A]): List[A] = as match
     case Cons(_, tl) => tl
@@ -85,6 +92,3 @@ object List:
     case Nil => throw new UnsupportedOperationException("init of empty list")
     case Cons(_, Nil) => Nil
     case Cons(h, tl)  => Cons(h, init(tl))
-
-  def length[A](as: List[A]): Int =
-    foldRight(as, 0, (_, acc) => acc + 1)
