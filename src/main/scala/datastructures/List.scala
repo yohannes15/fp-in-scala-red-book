@@ -133,3 +133,25 @@ object List:
         case (Cons(h1, t1), Cons(h2, t2)) => loop(t1, t2, Cons(f(h1, h2), acc))
 
     reverse(loop(a, b, Nil))
+
+  /** pattern match on the structure of `sup`. If `sup` is empty, then we return
+    * true if sub is also empty and false otherwise. If sup is nonempty, then we
+    * first check if sup starts with sub. If so, we’re done, and we return true;
+    * if not, we recurse on our tail, checking if the tail has sub as a
+    * subsequence.
+    */
+  @annotation.tailrec
+  def hasSubsequence[A](sup: List[A], sub: List[A]): Boolean = sup match
+    case Nil                       => sub == Nil
+    case _ if startsWith(sup, sub) => true
+    case Cons(h, t)                => hasSubsequence(t, sub)
+
+  @annotation.tailrec
+  /** recurse on the structure of both lists. If the prefix is Nil, then l
+    * trivially starts with prefix. Otherwise, we check if the head of l is
+    * equal to the head of prefix and, if so, recurse on the tails
+    */
+  def startsWith[A](l: List[A], prefix: List[A]): Boolean = (l, prefix) match
+    case (_, Nil)                              => true
+    case (Cons(h, t), Cons(h2, t2)) if h == h2 => startsWith(t, t2)
+    case _                                     => false
