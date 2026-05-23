@@ -38,6 +38,9 @@ object List:
   def length[A](as: List[A]): Int =
     foldLeft(as, 0, (acc, _) => acc + 1)
 
+  def reverse[A](as: List[A]): List[A] =
+    foldLeft(as, Nil, (acc, a) => Cons(a, acc))
+
   def foldRight[A, B](as: List[A], acc: B, f: (A, B) => B): B =
     as match
       case Nil         => acc
