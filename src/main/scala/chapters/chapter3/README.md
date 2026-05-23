@@ -91,6 +91,44 @@ foldRight(Cons(1, Cons(2, Cons(3, Nil))), 0, (x,y) => x + y)
 
 Note that foldRight must traverse all the way to the end of the list (pushing frames onto the call stack as it goes) before it can begin collapsing it. 
 
+### foldLeft
+
+`foldLeft` is the tail-recursive counterpart to `foldRight`. It processes the list left-to-right, consuming the accumulator as it goes, so it doesn't need to push stack frames:
+
+```scala
+foldLeft(Cons(1, Cons(2, Cons(3, Nil))), 0, (acc, x) => acc + x)
+foldLeft(Cons(2, Cons(3, Nil)), 0 + 1, (acc, x) => acc + x)      // ①
+foldLeft(Cons(3, Nil), (0 + 1) + 2, (acc, x) => acc + x)
+foldLeft(Nil, ((0 + 1) + 2) + 3, (acc, x) => acc + x)
+((0 + 1) + 2) + 3
+6
+// ① f takes (acc, x) order — the accumulator comes first
+```
+
+Key differences from `foldRight`:
+
+| | foldRight | foldLeft |
+|---|---|---|
+| **Traversal** | Right-to-left (via stack) | Left-to-right (tail-recursive) |
+| **Stack safe?** | No (stack grows with list) | Yes (`@annotation.tailrec`) |
+| **f parameter order** | `(A, B) => B` — element first | `(B, A) => B` — accumulator first |
+| **Algebraic view** | Replaces `Cons` with `f`, `Nil` with `acc` | Same, but associates to the left |
+| **Natural use cases** | Building structures (like `append`, `map`) | Aggregations (like `sum`, `length`) |
+
+#### Right-to-left operations need foldRight (or reverse + foldLeft)
+
+Some operations, like `append`, must preserve list order. `foldRight` handles this naturally because it processes elements in their original sequence. The same operation via `foldLeft` would reverse the result, so you need to `reverse` the input first:
+
+```scala
+// foldRight — natural: Cons(1, Cons(2, ys))
+append(xs, ys) = foldRight(xs, ys, Cons(_, _))
+
+// foldLeft — need reverse first
+append(xs, ys) = foldLeft(reverse(xs), ys, (acc, a) => Cons(a, acc))
+```
+
+This pattern (reverse then foldLeft) is how `foldRightViaFoldLeft` works in `List.scala` — it gives us the right-to-left semantics of `foldRight` with the stack safety of `foldLeft`.
+
 ## Misc Notes
 
 ### Variance

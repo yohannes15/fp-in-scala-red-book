@@ -46,17 +46,17 @@ object List:
       case Nil         => acc
       case Cons(x, xs) => f(x, foldRight(xs, acc, f))
 
-  /** Reverse the input list and then foldLeft with the result, flipping the
-    * order of the parameters passed to the combining function
-    */
-  def foldRightViaFoldLeft[A, B](as: List[A], acc: B, f: (A, B) => B): B =
-    foldLeft(reverse(as), acc, (acc, a) => f(a, acc))
-
   @annotation.tailrec
   def foldLeft[A, B](as: List[A], acc: B, f: (B, A) => B): B =
     as match
       case Nil         => acc
       case Cons(h, tl) => foldLeft(tl, f(acc, h), f)
+
+  /** Reverse the input list and then foldLeft with the result, flipping the
+    * order of the parameters passed to the combining function
+    */
+  def foldRightViaFoldLeft[A, B](as: List[A], acc: B, f: (A, B) => B): B =
+    foldLeft(reverse(as), acc, (acc, a) => f(a, acc))
 
   def tail[A](as: List[A]): List[A] = as match
     case Cons(_, tl) => tl
@@ -78,17 +78,8 @@ object List:
     case Cons(h, tl) if f(h) => dropWhile(tl, f)
     case _                   => as
 
-  /** Note that this definition only copies values until the first list is
-    * exhausted, so its runtime and memory usage are determined only by the
-    * length of a1. The remaining list then just points to a2. If we were to
-    * implement this same function for two arrays, we’d be forced to copy all
-    * the elements in both arrays into the result. In this case, the immutable
-    * linked list is much more efficient than an array!
-    */
-  def append[A](a1: List[A], a2: List[A]): List[A] =
-    a1 match
-      case Nil        => a2
-      case Cons(h, t) => Cons(h, append(t, a2))
+  def append[A](xs: List[A], ys: List[A]): List[A] =
+    foldRight(xs, ys, Cons(_, _))
 
   /** returns the list but with the last element removed. The runtime of init is
     * proportional to the length of the list. Furthermore, we have to build up a
