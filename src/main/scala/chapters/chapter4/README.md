@@ -136,6 +136,25 @@ lookupByName("Joe").map(_.department).getOrElse("Default Dept.")
 // Joe's department if joe is an employee. "Default dept" if not
 ```
 
+With `flatMap` and `f: A => Option[B]` we can construct a computation with multiple stages, any of which may fail, and the computation will abort as soon as the first failure is encountered, since None.flatMap(f) will immediately return None, without running f.
+
+A common pattern is transforming an `Option` via calls to `map`, `flatMap` and/or `filter` and then using `getOrElse` to do error handling at the end.
+
+```scala
+val dept: String = 
+  lookupByName("Joe").map(_.department).filter(_ != "Accounting").getOrElse("Default Apt")
+```
+
+`getOrElse` is used here to convert from an `Option[String]` to a `String` by providing a default department in case the key "Joe" didn’t exist in the Map or Joe’s department was "Accounting". `orEls`e is similar to `getOrElse`, except that we return another Option if the first is undefined. This is often useful when we need to chain together possibly failing computations, trying the second if the first hasn’t succeeded.
+
+**NOTE** that we don't have to check for None at each stage of the computation; we can apply several transformations and then check for and handle `None` when we are ready. We also get additional safety, since **`Option[A]` is a different type than `A` and the compiler won't let us forget to defer or handle the possibility of `None`.**
+
+A common idiom is using `o.getOrElse(throw Exception(...))` to convert the `None` case back to an Exception. The general rule is using exceptions only:
+
+- **If no reasonable program would ever catch the exception**: If for some callers the exception might be a recoverable error, we use `Option / Either` to give them flexibility. When in doubt, avoid use of exceptions especially as a beginner as error values are usually better than exceptions.
+
+## Option Composition / Lifting and Wrapping Exception-Oriented APIs
+
 ## Misc Notes
 
 ### Throw is an expression
