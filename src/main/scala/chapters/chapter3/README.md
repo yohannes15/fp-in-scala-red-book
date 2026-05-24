@@ -84,6 +84,8 @@ List exists in Scala standard library and in subsequent chapters we'll use that.
 
 When pattern matching, `case Cons(h, t)` becomes `case h :: t`, which avoids having to nest parentheses if writing a pattern like `case h :: h2 :: t` to extract more than just the first element of the list.
 
+`map`, `filter`, and `flatMap` are higher-order functions that compute a new list from an input list.
+
 There are a number of other useful methods on the standard library lists. These are defined as methods on `List[A]` rather than as standalone functions.
 
 - `def take(n: Int): List[A]` - returns a list consisting of the first n elements of this.
@@ -106,6 +108,8 @@ One of the problems with `List` is that although we often express operations and
 
 Pattern matching works a bit like a fancy switch statement that may descend into the structure of the expression it examines and extract subexpressions of that structure. It’s introduced with an expression (the target or scrutinee) like `ds` followed by the keyword `match` and a sequence of `case`s.
 
+Pattern matching lets us destructure an algebraic data type, allowing us to inspect the values used to construct the algebraic data type.
+
 Scala is often, but **NOT** always, able to determine at compile time if a match expression does not cover all cases. In such cases, the compiler reports a warning. Otherwise you get a runtime `MatchError`
 
 A pattern matches the target if there exists an assignment of variables in the pattern to subexpressions of the target that make it structurally equivalent to the target. The resulting expression for a matching case will then have access to these variable assignments in its local scope.
@@ -114,7 +118,7 @@ A pattern matches the target if there exists an assignment of variables in the p
 
 When data is immutable, how do we write functions that, for ex, add or remove elements from a list? 
 
-When we add an element 1 to the front of an existing list say `xs`, we return a new list - in this case, `Cons(1, xs)`. Since lists are immutable, we don't need to actually copy `xs`, we can just reuse it. This is called **data sharing**. Sharing of immutable data lets us implement functions more efficiently; we can always return immutable data strucutres without having to worry about subsequent code modifiying our data.
+When we add an element 1 to the front of an existing list say `xs`, we return a new list - in this case, `Cons(1, xs)`. Since lists are immutable, we don't need to actually copy `xs`, we can just reuse it. This is called **data sharing or strucutural sharing or persistence**. Sharing of immutable data lets us implement functions more efficiently; we can always return immutable data strucutres without having to worry about subsequent code modifiying our data.
 
 In the same way, to remove an element from the front of a list `val mylist = Cons(x, xs)`, we simply return its tail, `xs`. There's no real removing going on :) The original list, is still available and unharmed. Functional data structures are persistent, meaning existing references are never changed by operations on the data strucutre.
 
@@ -134,6 +138,8 @@ l1.tail == l2
 ```
 
 ### Recursion over lists and generalizing to HOFs
+
+`foldRight` and `foldLeft` allow us to compute a single result by visiting all the values of a list.
 
 `foldRight` is not specific to any one type of element, and we discover while generalizing that the value that’s returned doesn’t have to be of the same type as the elements of the list! One way of describing what `foldRight` does is that it replaces the constructors of the list, `Nil` and `Cons`, with `acc` and `f`.
 
@@ -198,6 +204,8 @@ This pattern (reverse then foldLeft) is how `foldRightViaFoldLeft` works in `Lis
 A datatype defined by one or more data constructors, each of which may contain zero or more arguments. The datatype is the sum/union of its data constructors, and each data constructor is the product of its arguments.
 
 The naming is not coincidental. There’s a deep connection, beyond the scope of this book, between the “addition” and “multiplication” of types to form an ADT and the addition and multiplication of numbers. Algebraic data types can be used to define other data structures. (Example: List, Binary Tree ...)
+
+Many algorithms can be implemented with recursion on the structure of an algebraic data type, with a base case associated with one data constructor and recursive cases associated with other data constructors.
 
 ### ADTs & Encapsulation
 
