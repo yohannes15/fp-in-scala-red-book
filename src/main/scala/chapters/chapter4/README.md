@@ -155,6 +155,51 @@ A common idiom is using `o.getOrElse(throw Exception(...))` to convert the `None
 
 ## Option Composition / Lifting and Wrapping Exception-Oriented APIs
 
+It may be easy to jump to the conclusion that once we start using `Option`, it spreads throughout our entire code base. One can imagine how any callers of methods that take or return `Option` will have to be modified to handle either Some or None; but actually this doesn’t happen **because we can *lift* ordinary functions to become functions that operate on `Option`.**
+
+For example, the `map` function lets us operate on values of the `Option[A]` type using a function of the `A => B` type, which returns `Option[B]`. Another way of looking at this is that map turns a function `f` of type `A => B` into a function of type `Option[A] => Option[B]`.
+
+```scala
+/** returns a function which maps None to None and applies f to the contents of Some.
+  * f need not be aware of the Option type at all.
+  */
+def lift[A, B](f: A => B): Option[A] => Option[B] = 
+  _.map(f)
+```
+
+This tells us that any function we already have can be transformed (via `lift`) to operate within the context of an `Option` value. 
+
+```scala
+val absOpt: Option[Double] => Option[Double] = lift(math.abs)
+val ex1 = absOpt(Some(-1.0))
+// ex1: Option[Double] = Some(1.0)
+```
+
+```scala
+/** Secret formula for computing an annual car insurance premium from any 2 key factors */
+def insuranceRateQuote(age: Int, numberOfSpeedingTickets: Int): Double = ???
+```
+
+We want to be able to call this function, but if the user is submitting their age and number of speeding tickets in a web form, these fields will arrive as simple strings that we have to (try to) parse into integers. This parsing may fail; given a string, `s`, we can attempt to parse it into an `Int` using `s.toInt`, which throws a `NumberFormatException` if the string isn’t a valid integer.
+
+We can write a utility function that converts that exception into a `None` like below but we will run into a problem? our Quote function takes two `Int` values not `Option[Int]`. Do we have to rewrite `insuranceRateQuote` to take `Option[Int]` values instead? **NO**, and changing `insuranceRateQuote` would be entangling concerns, forcing it to be aware that a prior computation may have failed, not to mention that we may not have the ability to modify `insuranceRateQuote`—perhaps it’s defined in a separate module we don’t have access to. 
+
+Instead we lift `insuranceRateQuote` to operate in the context of two Optional values. We could do this by using explicit pattern matching in the body of `parseInsuranceRateQuote` but thats going to be tedious? Instead we will use `map2` to combine two optional values.
+
+```scala
+def toIntOption(s: String): Option[Int] = 
+  try Some(s.toInt)
+  catch case _: NumberFormatException => None
+
+def parseInsuranceRateQuote(age: String, numberOfSpeedingTickets: String): Option[Double] =
+  val optAge: Option[Int] = toIntOption(age)
+  val optTickets: Option[Int] = toIntOption(numberOfSpeedingTickets)
+  // if either parse fails, this will immediately return None
+  map2(optAge, optTickets)(insuranceRateQuote)
+```
+
+The `map2` function means we never need to modify any existing functions of two arguments to make them `Option`-aware. We can lift them to operate in the context of `Option` after the fact. We can already see how we might define `map3`, `map4`, and `map5` ...
+
 ## Misc Notes
 
 ### Throw is an expression
@@ -208,3 +253,25 @@ For example, in `def foo(a: A): B`, the **type A is in contravariant position** 
 ### By-name vs named arguments
 
 The `default: => B` says that the argument is of type `B`, but it won't be evaluated until its needed by the function. This is called a **by-name parameter** and is a parameter that is only evaluated when it is actually used inside the function body. This is opposite to the usual **named arguments**
+
+### Parameter lists
+
+```scala
+def map2[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C]
+```
+
+Note that we have two parameter lists here; the first parameter list takes an `Option[A]` and an `Option[B]`, and the second parameter list takes a function `(A, B) => C`. To call this function, we supply values for each parameter list—for example, `map2(oa, ob) (_ + _)`. We could have defined this with a single parameter list instead, though it’s common style to use **two parameter lists when a function takes multiple parameters and the last parameter is itself a function**.
+
+Doing so allows a syntax variation when passing multiline anonymous functions, where the final parameter list is replaced with either an *indented block* or a *brace delimited* block:
+
+```scala
+// indented block following a colon and parameter list
+map2(oa, ob): (a, b) => 
+  a + b
+// Brace delimited block
+map2(oa, ob) { (a, b) =>
+  a + b
+}
+```
+
+*There was another benefit of multiple parameter lists in `Scala 2`: better type inference. Scala 2 inferred type parameters on each parameter list in **succession**. If Scala 2 was able to infer a concrete type in the first parameter list, then any appearance of that type in subsequent parameter lists would be fixed (i.e., not further inferred or generalized). For example, map(List(1, 2, 3), _ + 1) from chapter 3 would fail to compile with a type inference error, but had we defined map with two parameter lists, resulting in usage like map(List(1, 2, 3))(_ + 1), compilation would have succeeded. **Scala 3 can infer type parameters from all parameter lists simultaneously**, so there are no longer type inference advantages to using multiple parameter lists.*

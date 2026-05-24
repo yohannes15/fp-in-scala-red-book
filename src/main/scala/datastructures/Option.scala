@@ -15,11 +15,6 @@ enum Option[+A]:
     * If this is [[None]] the function is not applied and [[None]] is returned.
     * This is the fundamental "lift" operation that lets pure functions work
     * inside the `Option` context.
-    *
-    * @param f
-    *   the function to apply to the inner value (if present)
-    * @return
-    *   `Some(f(a))` if this is `Some(a)`, otherwise `None`
     */
   def map[B](f: A => B): Option[B] = this match
     case Some(a) => Some(f(a))
@@ -31,11 +26,6 @@ enum Option[+A]:
     * evaluated only when `this` is [[None]]. If `this` is [[Some]] the default
     * is never computed——a useful optimisation when the default expression is
     * expensive.
-    *
-    * @param default
-    *   by-name default value, evaluated only when needed
-    * @return
-    *   the inner value or `default`
     */
   def getOrElse[B >: A](default: => B): B = this match
     case Some(get) => get
@@ -46,11 +36,6 @@ enum Option[+A]:
     * Equivalent to `map(f).getOrElse(None)`. Useful for chaining operations
     * that each return `Option`——if any step returns [[None]] the chain
     * short-circuits.
-    *
-    * @param f
-    *   the function to apply, returning an `Option[B]`
-    * @return
-    *   the inner `Option[B]` if this is `Some(a)`, otherwise `None`
     */
   def flatMap[B](f: A => Option[B]): Option[B] =
     map(f).getOrElse(None)
@@ -59,15 +44,6 @@ enum Option[+A]:
     * `ob`. orElse is different from getOrElse in that it doesn't unwrap the
     * value and we can stay in [[Option]] land which can allow us to do chaining
     * and other nicer operations on errors and defaults until chain fails.
-    *
-    * Like `getOrElse`, the alternative is passed '''by-name''' and is only
-    * evaluated when this is [[None]]. This is the `Option` analogue of the
-    * logical "or" operation.
-    *
-    * @param ob
-    *   by-name alternative `Option`, evaluated only when needed
-    * @return
-    *   `this` if it is `Some(a)`, otherwise `ob`
     */
   def orElse[B >: A](ob: => Option[B]): Option[B] =
     map(a => Some(a)).getOrElse(ob)
@@ -79,11 +55,9 @@ enum Option[+A]:
     *
     * Equivalent to `flatMap(a => if f(a) then Some(a) else None)`. If this is
     * [[None]] or the predicate returns `false`, [[None]] is returned.
-    *
-    * @param f
-    *   the test predicate
-    * @return
-    *   `Some(a)` if `this` is `Some(a)` and `f(a)` is `true`, else `None`
     */
   def filter(f: A => Boolean): Option[A] =
     flatMap(a => if f(a) then Some(a) else None)
+
+  def map2[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] =
+    ???
