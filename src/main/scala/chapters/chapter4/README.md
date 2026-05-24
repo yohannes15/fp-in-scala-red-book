@@ -112,6 +112,8 @@ Using this type, invalid inputs now return `None` instead of sentinel values lik
 
 Partial functions are abound in programming, and `Option` and `Either` is typically how this partiality is dealt with in FP. Some examples where Option is used is in `Map` lookup for a given key and `headOption` and `lastOption` defined for lists and other iterables.
 
+Option doesn’t tell us anything about what went wrong in the case of an exceptional condition. All it can do is give us None, indicating there’s no value to be had.
+
 ### Basic Functions on Option
 
 `Option` can be thought of like a `List` that can contain at most 1 element, and many of the `List` functions we saw have analogous functions on Option.
@@ -228,6 +230,37 @@ In this defintion, sequence can be implemented easily using `traverse`. We pass 
 ```scala
 traverse(as)(identity) || traverse(as)(a => a)
 ```
+
+### For Comprehensions
+
+Since lifting functions is so common in Scala, Scala provides a syntactic construct called the `for-comprehension`, which it expands automatically to a series of `flatMap` and `map` calls. Let’s look at how map2 could be implemented with for-comprehensions. Here’s our original version
+
+```scala
+def map2[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] =
+  a.flatMap(aa => b.map(bb => f(aa, bb)))
+```
+
+And here’s the exact same code written as a for-comprehension:
+
+```scala
+def map2[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] =
+  for
+    aa <- a
+    bb <- b
+  yield f(aa, bb)
+```
+
+The `yield` may make use of any of the values on the left side of any previous <- binding. The compiler desugars the bindings to `flatMap` calls, with the final binding and yield being converted to a call to map.
+
+You should feel free to use for-comprehensions in place of explicit calls to `flatMap` and `map`. Likewise, feel free to rewrite a for-comprehension as a sequence of flat-Map calls followed by a final map if doing so helps you understand the expression. For-comprehensions are purely a syntax convenience.
+
+### Adapting functions to options
+
+Between `map, lift, sequence, traverse, map2, map3`, and so on, **you should never have to modify any existing functions to work with optional values.**
+
+## The Either data type
+
+
 
 ## Misc Notes
 
