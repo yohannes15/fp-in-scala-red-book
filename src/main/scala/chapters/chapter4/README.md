@@ -158,6 +158,14 @@ A function is total if its defined for all inputs. it takes each value of the in
 
 The `B >: A` type parameter on the `getOrElse` and `orElse` functions indicates that `B` must be equal to or a supertype of `A`. It’s needed to convince Scala that it’s still safe to declare `Option[+A]` as covariant in `A`. [See chapter notes](https://github.com/fpinscala/fpinscala/wiki/Chapter-4:-Handling-errors-without-exceptions) for more details. It’s unfortunately somewhat complicated but a necessary complication in Scala; fortunately, fully understanding subtyping and variance isn’t essential for our purposes.
 
+### Covariant and contravariant positions
+
+A type is in **covariant** position (positive) if it is in the result type of a function, or more generally is the type of a value that is produced.
+
+A type is in **contravariant** position (negative) if it's in the argument type of a function, or more generally is the type of a value that is consumed.
+
+For example, in `def foo(a: A): B`, the **type A is in contravariant position** and **B is in covariant position**, all things being equal.
+
 ### By-name vs named arguments
 
 The `default: => B` says that the argument is of type `B`, but it won't be evaluated until its needed by the function. This is called a **by-name parameter** and is a parameter that is only evaluated when it is actually used inside the function body. This is opposite to the usual **named arguments**
