@@ -116,6 +116,26 @@ Partial functions are abound in programming, and `Option` and `Either` is typica
 
 `Option` can be thought of like a `List` that can contain at most 1 element, and many of the `List` functions we saw have analogous functions on Option.
 
+The `map` function can be used to transform the result inside an Option, if it exists. We can think of it as proceeding with a computation on the assumption that an error hasn't occurred; its also a way of deferring the error handling to later code
+
+```scala
+case class Employee(
+  name: String,
+  department: String,
+  manager: Option[Employee])
+def lookupByName(name: String): Option[Employee] = ???
+val joeDepartment: Option[String] = lookupByName("Joe").map(_.department)
+
+lookupByName("Joe").map(_.department)
+// Joe's department if Joe is an employee. None if joe is not an employee
+
+lookupByName("Joe").flatMap(_.manager)
+// Some(Manager) if joe has a manager. None if joe is not an employee or doesn't have a manager
+
+lookupByName("Joe").map(_.department).getOrElse("Default Dept.")
+// Joe's department if joe is an employee. "Default dept" if not
+```
+
 ## Misc Notes
 
 ### Throw is an expression
