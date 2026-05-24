@@ -9,6 +9,14 @@ enum Tree[+A]:
     case Leaf(_)      => 1
     case Branch(l, r) => l.size + r.size
 
+  def depth: Int = this match
+    case Leaf(_)      => 0
+    case Branch(l, r) => 1 + (l.depth max r.depth)
+
+  def map[B](f: A => B): Tree[B] = this match
+    case Leaf(a)      => Leaf(f(a))
+    case Branch(l, r) => Branch(l.map(f), r.map(f))
+
 object Tree:
   /** extension methods for a more specific type! Tree[Int] */
   extension (t: Tree[Int])
