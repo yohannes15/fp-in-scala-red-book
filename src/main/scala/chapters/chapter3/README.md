@@ -163,6 +163,8 @@ A datatype defined by one or more data constructors, each of which may contain z
 
 The naming is not coincidental. There’s a deep connection, beyond the scope of this book, between the “addition” and “multiplication” of types to form an ADT and the addition and multiplication of numbers. Algebraic data types can be used to define other data structures. (Example: List, Binary Tree ...)
 
+### ADTs & Encapsulation
+
 One might object that algebraic data types violate encapsulation by making public the internal representation of a type. In FP, we approach concerns about encapsulation differently—we don’t typically have delicate mutable state that could lead to bugs or violation of invariants if exposed publicly. 
 
 **Exposing the data constructors of a type is often fine, and the decision to do so is approached much like any other decision about what the public API of a data type should be.** It’s also possible in Scala to expose patterns like Nil and Cons independent of the actual data constructors of the type.

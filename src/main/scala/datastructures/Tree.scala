@@ -5,28 +5,31 @@ enum Tree[+A]:
   case Leaf(value: A)
   case Branch(left: Tree[A], right: Tree[A])
 
-  def size: Int = this match
-    case Leaf(_)      => 1
-    case Branch(l, r) => l.size + r.size
+  def size: Int = fold(a => 1, (l, r) => 1 + l + r)
 
-  def depth: Int = this match
-    case Leaf(_)      => 0
-    case Branch(l, r) => 1 + (l.depth max r.depth)
+  def depth: Int = fold(a => 0, (l, r) => 1 + l.max(r))
 
-  def map[B](f: A => B): Tree[B] = this match
-    case Leaf(a)      => Leaf(f(a))
-    case Branch(l, r) => Branch(l.map(f), r.map(f))
+  def map[B](f: A => B): Tree[B] =
+    fold(a => Leaf(f(a)), (l, r) => Branch(l, r))
+
+  def fold[B](f: A => B, g: (B, B) => B): B = this match
+    case Leaf(a)      => f(a)
+    case Branch(l, r) => g(l.fold(f, g), r.fold(f, g))
 
 object Tree:
-  /** extension methods for a more specific type! Tree[Int] */
   extension (t: Tree[Int])
-    /** 1st positive integer in the tree, else the last visited value. */
-    def firstPositive: Int = t match
-      case Leaf(n)      => n
-      case Branch(l, r) =>
-        val lpos = l.firstPositive
-        if lpos > 0 then lpos else r.firstPositive
+    def maximum: Int =
+      t.fold(a => a, (l, r) => l max r)
 
-    def maximum: Int = t match
-      case Leaf(n)      => n
-      case Branch(l, r) => l.maximum max r.maximum
+    /**   - if left subtree already found a positive → keep it
+      *   - otherwise check right subtree
+      *   - if neither found one → return the last visited value (r._2)
+      */
+    def firstPositive: Int =
+      t.fold[(Boolean, Int)](
+        a => (a > 0, a),
+        (l, r) =>
+          if l._1 then l
+          else if r._1 then r
+          else (false, r._2)
+      )._2
