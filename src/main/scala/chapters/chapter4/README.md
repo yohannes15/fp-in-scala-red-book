@@ -53,7 +53,68 @@ The two main cons of expressions are:
 
 ## Alternatives to exceptions
 
+```scala
+def mean(xs: Seq[Double]): Double =
+  if xs.isEmpty then
+    throw new ArithmeticException("mean of empty list!")
+  else xs.sum / xs.length
+```
 
+The mean function is an example of whats called a `partial function`: its not defined for some inputs.
+
+Some options we have are:
+
+1. Return some sort of bogus/default/sentinel value of type `Double`. We could simply return `xs.sum / xs.length` in all cases, resulting in `/0.0` when input is empty, which is `Double.NaN`
+2. Return null instead of a value of the needed type
+3. Forcing the caller to supply an argument that tells us what to do in case we don't know how to handle the input.
+
+In above options 1/2's approach isn't ideal and is often done in languages that don't support exceptions well. We reject them for 2 reasons
+
+- **Errors can silently propagate**: The caller can forget to check this condition and won't be alerted by compiler. Often error won't be detected until much later in the code.
+- **Boilerplate at call sites**, with explicit if checks for a real result: This gets magnified if you happen to be calling several functions.
+- **Not applicable to polymorphic code**: For some output types, we might not even have a sentinel value of that type even if we wanted to! Consider a function like `max`, which finds the maximum value in a sequence according to a custom comparion function like below. If the input is empty, we can't invent a value of type A, nor can null be used here, since null is only valid for nonprimitive types, and A may in fact be a primitive like Double or Int.
+
+```scala
+def max[A](xs: Seq[A])(greater: (A, A) => Boolean): A = ???
+```
+
+- **Demands special policy or calling convention of callers**: Proper use of the mean fn would require callers to do something other than call mean and make use of the result. Giving functions special policies like this makes it difficult to pass them to higher-order functions, which must treat all arguments uniformly.
+
+In option number 3 above, it would be like below. Why is this bad?
+
+```scala
+def mean(xs: Seq[Double], onEmpty: Double): Double =
+  if xs.isEmpty then onEmpty
+  else xs.sum / xs.length
+```
+
+This makes mean into a total function, but it has several drawbacks:
+
+- **Requires immediate callers to have direct knowledge of how to handle the undefined case and limits them to returning a `Double`**. What if mean is called as part of a larger computation and we'd like to abort that computation if mean is undefined. Or perhaps we'd like to take some completely different branch in the larger computation in this case. Simply passing an `onEmpty` parameter doesn't give us this freedom. We need a way to defer the decision of how to handle undefined cases so they can be dealt with at the most appropriate level.
+
+## The Option data type
+
+The solution is **explicitly representing that a function may not always have an answer in the return type. We can think of this as deferring to the caller for the error-handling strategy.**.
+
+Option has two cases: `Some` (defined) and `None` (undefined)
+
+```scala
+import Option.{Some, None}
+
+// return type now reflects possibility that result may not always be defined
+// mean is also now a total function (always returns a result of the declared type)
+def mean(xs: Seq[Double]): Option[Double] =
+  if xs.isEmpty then None
+  else Some(xs.sum / xs.length)
+```
+
+Using this type, invalid inputs now return `None` instead of sentinel values like `-99999999`. The choice of the special/sentinel value is ambiguous, and compiler can't check that the caller handles it correctly. **With `Option`, every valid output is wrapped in `Some` and compiler forces the caller to deal explicity with the possibility of failure.**
+
+Partial functions are abound in programming, and `Option` and `Either` is typically how this partiality is dealt with in FP. Some examples where Option is used is in `Map` lookup for a given key and `headOption` and `lastOption` defined for lists and other iterables.
+
+### Basic Functions on Option
+
+`Option` can be thought of like a `List` that can contain at most 1 element, and many of the `List` functions we saw have analogous functions on Option.
 
 ## Misc Notes
 
@@ -76,3 +137,27 @@ def map[A, B](l: List[A], f: A => B): List[B]
 This function is clearly useful, highly generic, and at odds with the use of checked exceptions; we can’t have a version of map for every single checked exception that could possibly be thrown by f. Even if we wanted to do this, how would map know what exceptions were possible? This is why generic code, even in Java, so often resorts to using RuntimeException or some common checked Exception type. 
 
 There is active research for this. Scala 3 has some [experimental features](https://docs.scala-lang.org/scala3/reference/experimental/canthrow.html) to try to address this.
+
+---
+
+### Sum on sequences
+
+`sum` is defined as a method on `Seq` only if the elements of the sequence are numeric. The standard library accomplishes this trick with implicits.
+
+---
+
+### Partial vs Total function
+
+A function is partial if its only defined for some inputs. It may also be partial if it doesn’t terminate for some inputs. We won’t discuss this form of partiality here, since it’s not a recoverable error, so there’s no question of how best to handle it. A function is typically partial because it makes some assumptions about its inputs that aren’t implied by the input types.
+
+A function is total if its defined for all inputs. it takes each value of the input type to exactly one value of the output type.
+
+---
+
+### Variance Notes
+
+The `B >: A` type parameter on the `getOrElse` and `orElse` functions indicates that `B` must be equal to or a supertype of `A`. It’s needed to convince Scala that it’s still safe to declare `Option[+A]` as covariant in `A`. [See chapter notes](https://github.com/fpinscala/fpinscala/wiki/Chapter-4:-Handling-errors-without-exceptions) for more details. It’s unfortunately somewhat complicated but a necessary complication in Scala; fortunately, fully understanding subtyping and variance isn’t essential for our purposes.
+
+### By-name vs named arguments
+
+The `default: => B` says that the argument is of type `B`, but it won't be evaluated until its needed by the function. This is called a **by-name parameter** and is a parameter that is only evaluated when it is actually used inside the function body. This is opposite to the usual **named arguments**
