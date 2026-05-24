@@ -163,6 +163,12 @@ A datatype defined by one or more data constructors, each of which may contain z
 
 The naming is not coincidental. There’s a deep connection, beyond the scope of this book, between the “addition” and “multiplication” of types to form an ADT and the addition and multiplication of numbers. Algebraic data types can be used to define other data structures. (Example: List, Binary Tree ...)
 
+One might object that algebraic data types violate encapsulation by making public the internal representation of a type. In FP, we approach concerns about encapsulation differently—we don’t typically have delicate mutable state that could lead to bugs or violation of invariants if exposed publicly. 
+
+**Exposing the data constructors of a type is often fine, and the decision to do so is approached much like any other decision about what the public API of a data type should be.** It’s also possible in Scala to expose patterns like Nil and Cons independent of the actual data constructors of the type.
+
+We typically use ADTs for situations in which the set of cases is closed (i.e., known to be fixed). For `List` and `Tree`, changing the set of data constructors would significantly change what these data types are. List is a singly linked list, that is its nature, and the two cases `Nil` and `Cons` form part of its useful public API. We can certainly write code that deals with a more abstract API than `List`, but this sort of information hiding can be handled as a separate layer rather than being baked into `List` directly.
+
 ## Tuple in Scala
 
 Pairs and tuples of higher arities (e.g., triples) are also algebraic data types. They work justlike the ADTs we’ve been writing here but have special syntax:
