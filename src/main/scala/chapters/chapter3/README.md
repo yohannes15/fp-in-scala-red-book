@@ -11,8 +11,6 @@ This chapter covers functional data structures.
 - ADTs (algebaric data types)
 - Exercises with writing and generaizling pure functions
 
-## Chapter 2 Notes
-
 ### Functional Data Structures 
 
 A functional data structure:
