@@ -13,7 +13,7 @@ In this chapter we will create the `Option` and `Either` types ourselves and eve
 - `Either` datatype
 - `Try` datatype
 
-### Pros and Cons of exceptions
+### Cons of exceptions
 
 Why do exceptions break referential transparency, and why is that a problem?
 
@@ -51,6 +51,10 @@ The two main cons of expressions are:
 - **Exceptions break RT and introduce context dependence**: Moves us away from the simple reasoning of the substitution model, making it possible to write confusing, exception-based code. This is the source of the folkloric advice that exceptions should be used only for error handling, not for control flow.
 - **Exceptions are not type safe**: The type of `failingFn`, `Int => Int` tells us nothing about the fact that exceptions may occur, and the compiler will certainly not force callers of `failingFn` to make a decision about how to handle those exceptions. **If we forget to check for an exception in failingFn, this won’t be detected until runtime.**
 
+## Alternatives to exceptions
+
+
+
 ## Misc Notes
 
 ### Throw is an expression
@@ -60,3 +64,15 @@ val y: Int = throw Exception("fail!")
 ```
 
 Because throw is an expression in Scala, it evaluates to the bottom type, `Nothing`. Since Nothing is a subclass of every other type, the compiler allows it to be assigned to an Int. However, any attempt to access the variable y will crash the program with an exception
+
+### About Checked Exceptions
+
+While `Java’s` *checked exceptions* force a decision about whether to handle or reraise an error, they result in significant boilerplate for callers. More importantly, they don’t work for higher-order functions, which can’t possibly be aware of the specific exceptions that could be raised by their arguments. For example, consider the map function defined for List:
+
+```scala
+def map[A, B](l: List[A], f: A => B): List[B]
+```
+
+This function is clearly useful, highly generic, and at odds with the use of checked exceptions; we can’t have a version of map for every single checked exception that could possibly be thrown by f. Even if we wanted to do this, how would map know what exceptions were possible? This is why generic code, even in Java, so often resorts to using RuntimeException or some common checked Exception type. 
+
+There is active research for this. Scala 3 has some [experimental features](https://docs.scala-lang.org/scala3/reference/experimental/canthrow.html) to try to address this.
