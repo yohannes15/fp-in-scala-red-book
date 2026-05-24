@@ -38,6 +38,42 @@ val ex3: List[String] = List.Cons("a", List.Cons("b", List.Nil))
 
 Each data constructor also introduces a pattern that can be used for pattern matching, as in the functions `sum` and `product`
 
+### Enums Vs sealed traits
+
+We've defined the `List` and `Tree` algebraic data types with the enum feature. Alternatively, we could define them using `sealed trait` (this is how ADTs were defined in Scala 2).
+
+A `trait` defines an abstract interface of common methods (or values or other member types). Traits are abstract in the sense that they cannot be instantiated as values - rather, **values are introduced via subtypes.**
+
+A class (or object) extends a trait, and each instantiated value of that class is an instance of the trait. Traits may define both abstract and concrete methods, and as of Scala 3, they may define [parameters](https://docs.scala-lang.org/scala3/reference/other-new-features/trait-parameters.html), making them very similar to abstract classes. **A class or object can extend multiple traits but only a single abstract class.** There are [other small differences.](https://docs.scala-lang.org/tour/traits.html)
+
+Defining an ADT with a sealed trait involves enumerating the data constructors as subtypes of the trait, normally as case classes and case objects defined in the companion object of the trait. Below is the datastrucutres/List.scala but using `sealed trait`:
+
+```scala
+sealed trait List[+A]:
+  import List.{Cons, Nil}
+
+  def size: Int = this match
+    case Cons(_, tl)  => 1 + tl.size
+    case Nil          => 0
+
+object List:
+  case class Cons[+A](head: A, tail: List[A]) extends List[A]
+  case object Nil extends List[Nothing]
+
+// We could even define `size` as an abstract method and provide impl on each subtype
+
+sealed trait List[Int]:
+  def size: Int
+
+object List:
+  case class Cons[+A](head: A, tail: List[A]) extends List[A]:
+    def size: Int = 1 + tail.size
+  case object Nil extends List[Nothing]:
+    def size: Int = 0
+```
+
+NOTE: The choice of enum vs sealed traits is largely driven by preferences, though traits/abstract method encoding tends to shift focus to operations and away from thinking about data. Thus enum is focused on this book but note that **trait encoding allows for more customization.**
+
 ### List
 
 List exists in Scala standard library and in subsequent chapters we'll use that. The main difference betweent the `List` developed in datastructures/List.scala and the standard library version is that `Cons` is called `::`, which associates to the right, so: 
@@ -204,6 +240,10 @@ extension (t: Tree[Int])
 This says that for any `Tree[Int]`, there exists a method named `firstPositive`, which takes no arguments and returns an Int. The definition of firstPositive can reference the tree on which it was called as the value `t` due to the `(t: Tree[Int])` clause after the extension keyword—just like a regular method can reference `this`.
 
 When the compiler sees an expression like `myTree.firstPositive`, it will notice that there is no regular method named `firstPositive` and search for an extension method with that name. The search is limited to specific locations, so we need to define extension methods in one of those locations. In this case, we’ll put the `firstPositive` extension method into the companion object for `Tree`. Extension methods defined in the companion are **always available** to callers. [More details on extension method syntax](https://nightly.scala-lang.org/docs/reference/contextual/extension-methods.html)
+
+### Sealed modifier 
+
+The sealed modifier requires all subtypes to be defined in the same source file as the defining type. This is particularly important when defining ADTs, as we don’t want folks to be able to define new data constructors; otherwise, all our pattern matches would fail. The compiler can even check whether all data contructors are handled when pattern matching on a sealed trait, giving a warning if any cases are missing.
 
 ### Variance
 
