@@ -1,5 +1,7 @@
 package datastructures
 
+import scala.collection.immutable.List
+
 /** An optional value that may ([[Some]]) or may not ([[None]]) be present.
   *
   * `Option` is a container of size one——it either holds a single value of type
@@ -60,4 +62,12 @@ enum Option[+A]:
     flatMap(a => if f(a) then Some(a) else None)
 
   def map2[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] =
-    ???
+    a.flatMap(aa => b.map(bb => f(aa, bb)))
+
+  def sequence[A](as: List[Option[A]]): Option[List[A]] =
+    traverse(as)(identity)
+
+  def traverse[A, B](as: List[A])(f: A => Option[B]): Option[List[B]] =
+    as.foldRight(Some(Nil)) {
+      case (a, acc) => map2(f(a), acc)(_ :: _)
+    }

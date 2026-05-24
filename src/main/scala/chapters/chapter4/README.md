@@ -200,6 +200,35 @@ def parseInsuranceRateQuote(age: String, numberOfSpeedingTickets: String): Optio
 
 The `map2` function means we never need to modify any existing functions of two arguments to make them `Option`-aware. We can lift them to operate in the context of `Option` after the fact. We can already see how we might define `map3`, `map4`, and `map5` ...
 
+### Sequence and Traverse 
+
+Sometimes we’ll want to map over a list using a function that might fail, returning `None` if applying it to any element of the list returns None. For example, what if we have a whole list of `String` values that we wish to parse to `Option[Int]`? In that case, we can simply sequence the results of the map:
+
+```scala
+def sequence[A](as: List[Option[A]]): Option[List[A]] = 
+  as.foldRight(Some(Nil)) {
+    case (a, acc) => map2(a, acc)(_ :: _)
+  }
+
+def parseInts(as: List[String]): Option[List[Int]] =
+  sequence(as.map(a => toIntOption(s)))
+```
+
+Unfortunately, this is inefficient since it traverses the list twice—first to convert each `String` to an `Option[Int]` and second to combine these `Option[Int]` values into an `Option[List[Int]]`. **Wanting to sequence the results of a map this way is a common enough occurrence** to warrant a new generic function, `traverse`, with the following signature:
+
+```scala
+def traverse[A, B](as: List[A])(f: A => Option[B]): Option[List[B]] = 
+  as.foldRight(Some(Nil)) {
+    case (a, acc) => map2(f(a), acc)(_ :: _)  
+  }
+```
+
+In this defintion, sequence can be implemented easily using `traverse`. We pass the identity function to traverse since each element in our input list is already an option.
+
+```scala
+traverse(as)(identity) || traverse(as)(a => a)
+```
+
 ## Misc Notes
 
 ### Throw is an expression
