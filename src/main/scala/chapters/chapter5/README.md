@@ -80,4 +80,76 @@ Adding a **`lazy`** keyword to a val declaration will cause Scala to delay evalu
 
 **My defintion**: A strict function evaluates its input before doing anything else. Therefore, if it receives a broken or non-terminating input, the function itself is doomed to fail in the exact same way.
 
-## Lazy lists: An extended example
+## Lazy lists: An extended example (look at datastructures/LazyList.scala)
+
+We’ll see how chains of transformations on lazy lists are fused into a single pass by using laziness.
+
+```scala
+enum LazyList[+A]:
+  case Empty
+  case Cons(h: () => A, t: () => LazyList[A])
+
+object LazyList:
+...
+```
+
+This looks identical to `List` except the `Cons` data constructor takes *explicit* thunks (`() => A` and () => `LazyList[A]`), instead of strict values. Remeber **thunk means the unevaluated form of an expression**. We use explicit thunks here because **Scala doesn’t allow the parameters of a case class to be by-name parameters.** This limitation is the result of each parameter of a case class getting a corresponding public val.
+
+If we wish to examine or traverse the `LazyList`, we need to force these thunks! Heres an example:
+
+```scala
+/** optionall extract the head of a LazyList */
+def headOption: Option[A] = this match
+    case Empty => None
+    case Cons(h, _) => Some(h()) // forcing of the the h thunk using h()
+```
+
+This ability of `LazyList` to evaluate only the portion actually demanded (we don't evaluate the tail of the Cons) is useful, as we will see!
+
+### Memoizing lazy lists and avoiding recomputation
+
+We typically want to cache the values of a `Cons` node once they are forced. If we use the `Cons` data constructor directly, for instance, this code will actually **compute `expensive(x)` twice.**
+
+```scala
+val x = Cons(() => expensive(x), tl)
+val h1 = x.headOption
+val h2 = x.headOption
+```
+
+We typically avoid this problem by defining *smart constructors*. Here our smart constructor takes care of memoizing the by-name arguments for the head and tail of the `Cons`. **This is a common trick and ensures our thunk will only do its work once when forced for the first time.** Subsequent forces will return the cached *lazy val*.
+
+```scala
+def cons[A](hd: => A, tl: => LazyList[A]): LazyList[A] =
+   lazy val head = hd
+   lazy val tail = tl
+   Cons(() => head, () => tail)
+
+// annotates Empty as a LazyList[A], which is better for type inference in some cases. 
+// Read Smart Constructors section below in Misc Notes
+def empty[A]: LazyList = Empty
+```
+
+```scala
+def apply[A](as: A*): LazyList[A] =
+  if as.isEmpty then empty
+  else cons(as.head, apply(as.tail*))
+```
+
+Each time the head thunk is referenced in the resulting LazyList, the value of the lazy val head is returned. If that lazy val has already been initialized, then its cached value is returned. Otherwise, it’s computed, cached, and returned. This smart constructor gives us the best of all worlds; there is no need to manually create thunks at the call site of `Cons` or to cache the result, so it’s only computed once, and we retain the features provided by case classes.
+
+Scala takes care of wrapping the arguments to cons in thunks, so the `as.head` and `apply(as.tail*)` expressions won’t be evaluated until we force the LazyList.
+
+The `as` argument to apply is strict, however! When apply is called, each individual `A` expression is evaluated before the definition of `apply` is evaluated. To defer evaluation of each argument until forced by the resulting LazyList, we’d need each `A` to be by-name:
+
+```scala
+def apply[A](as: (=> A)*): LazyList[A] = ???
+```
+But scala doesn't support this syntax. We will discuss other ways of **lazily constructing a LazyList** later in this chapter.
+
+## Misc Notes 
+
+### Smart Constructors
+
+Smart constructors are functions for constructing data types that ensure some additional invariant or provide a slightly different signature than the real constructors. By convention, they are typically lowercase the first letter of the corresponding data constructor. E.g for `Cons(...)` it would be `def cons(...)`.
+
+Recall that Scala uses subtyping to represent data constructors, but we almost always want to infer `LazyList` as the type, not `Cons` or `Empty`. Making smart constructors that return the base type is a common trick, though one that was more important in Scala 2 than Scala 3, as Scala 3 will generally prefer to infer the type of the enum (e.g., `LazyList[A]`) instead of the type of the data constructor (e.g., `Cons[A]`).] We can see how both smart constructors are used in the `LazyList.apply` function.
