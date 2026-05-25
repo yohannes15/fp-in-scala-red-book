@@ -260,7 +260,54 @@ Between `map, lift, sequence, traverse, map2, map3`, and so on, **you should nev
 
 ## The Either data type
 
+```scala
+enum Either[+E, +A]:
+  case Left(value: E)
+  case Right(value: A)
+```
 
+`Either` has only two cases, just like `Option`. The essential difference is that both cases carry a value. The Either data type represents, in a very general way, values that can be one of two things. We can say that it’s a *disjoint union* of two types. When we use it to indicate success or failure, by convention. the `Right` constructor is reserved for the *success* case (a pun on right, meaning correct), and `Left` is used for failure. We’ve given the left type parameter the suggestive name E (for error).
+
+`Either` is also often used more generally to encode one of two possibilities in cases where it isn’t worth defining a fresh data type. We’ll see some examples of this throughout the book. 
+
+```scala 
+import Either.{Left, Right} 
+import scala.util.control.NonFatal
+
+def mean(xs: Seq[Double]): Either[String, Double] =
+  if xs.isEmpty then
+    Left("mean of empty list!")
+  else
+    Right(xs.sum / xs.length)
+
+def safeDiv(x: Int, y: Int): Either[Throwable, Int] =
+  try Right(x / y)
+  // The NonFatal pattern match ensures we do not catch fatal errors, e.g. OutOfMemoryException.
+  catch case NonFatal(t) => Left(t)
+```
+
+We can extract a more general function, `catchNonFata`l, which factors out this common pattern of converting thrown exceptions to values:
+
+```scala
+def catchNonFatal[A](a: => A): Either[Throwable, A] =
+  try Right(a)
+  catch case NonFatal(t) => Left(t)
+```
+
+This function is general enough to be defined on the `Either` companion object since it’s not tied to a single use case.
+
+After we have flatMaps and maps, Either can be used in for-comprehensions. Also, now we get information about the actual exception that occurred, rather than just getting back None in the event of a failure.
+
+```scala
+def parseInsuranceRateQuote(
+    age: String,
+    numberOfSpeedingTickets: String): Either[Throwable,Double] =
+  for
+    a <- Either.catchNonFatal(age.toInt)
+    tickets <- Either.catchNonFatal(numberOfSpeedingTickes.toInt)
+  yield insuranceRateQuote(a, tickets)
+
+```
 
 ## Misc Notes
 
