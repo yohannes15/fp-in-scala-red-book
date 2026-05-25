@@ -334,8 +334,84 @@ object Person:
     Name(name).map2(Age(age))(Person(_, _))
 ```
 
-### Accmulating errors
+### Accumulating errors
 
+`map2` is only able to report one error, even if both arguments are invalid (both are `Left`). To report multiple errors we need to make a few leaps. Lets start with `map2Both`
+
+```scala 
+def map2Both[E, A, B, C](
+  a: Either[E, A],
+  b: Either[E, B],
+  f: (A, B) => C
+): Either[List[E], C] = 
+  (a, b) match
+    case (Right(aa), Right(bb)) => Right(f(aa, bb))
+    case (Left(e), Right(_)) => Left(List(e))
+    case (Right(_), Left(e)) => Left(List(e))
+    case (Left(e1), Left(e2)) => Left(List(e1, e2))
+
+object Person:
+  def makeBoth(name: String, age: Int): Either[List[String], Person] = 
+    map2Both(Name(name), Age(age), Person(_, _))
+
+val p = Person.makeBoth("", -1)
+// Either[List[String], Person] = Left(List(Name is empty., Age is out of range.))
+
+```
+
+Unfortunately, `map2Both` is very limited. Consider what happens when we want to combine the result of 2 calls to `Person.makeBoth`.
+
+```scala
+val p1 = Person.makeBoth("Curry", 34)
+// Either[List[String], Person] = Right(Person(Name(Curry),Age(34)))
+val p2 = Person.makeBoth("Howard", 44)
+// Either[List[String], Person] = Right(Person(Name(Howard),Age(44)))
+val pair = map2Both(p1, p2, (_, _))
+// Either[List[List[String]], (Person, Person)] = 
+//    Right((Person(Name(Curry),Age(34)),Person(Name(Howard),Age(44))))
+```
+
+This compiles fine, but take a close look at the inferred type of `pair`—the left side of the `Either` now has nested lists! Each successive use of `map2Both` adds another layer of `List` to the error type. We can fix this by changing `map2Both` slightly. We’ll require the input values to already have a `List[E]` on the left side. Let’s call this new variant `map2All`.
+
+```scala
+def map2All[E, A, B, C](
+  a: Either[List[E], A],
+  b: Either[List[E], B],
+  f: (A, B) => C
+): Either[List[E], C] =
+  (a, b) match
+    case (Right(aa), Right(bb)) => Right(f(aa, bb))
+    case (Left(es), Right(_)) => Left(es)
+    case (Right(_), Left(es)) => Left(es)
+    case (Left(es1), Left(es2)) => Left(es1 ++ es2)
+
+val pair = map2All(p1, p2, (_, _))
+// Either[List[String], (Person, Person)] =
+//    Right((Person(Name(Curry),Age(81)),Person(Name(Howard),Age(96))))
+
+```
+
+Now let's try implementing a variant of `traverse` that returns all errors. Changing just the return type gives us signature like the following:
+
+```scala
+def traverseAll[E, A, B](as: List[A], f: A => Either[List[E], B]): Either[List[E], List[B]] =
+  as.foldRight(Right(Nil): Either[List[E], List[B]])((a, acc) =>
+    map2All(f(a), acc, _ :: _)
+  )
+
+def sequenceAll[E, A](as: List[Either[List[E], A]]): Either[List[E], List[A]] =
+  traverseAll(as, identity)
+```
+
+## Validated data type
+
+`Either[List[E], A]`, along with functions like `map2All`, `traverseAll`, and `sequenceAll`, gives us the ability to accumulate errors. Instead of defining these related functions in this ad hoc way, we can name this accumulation behavior, as `Validated`. A value of `Validated[E, A]` can be converted to an `Either[List[E], A]` and vice versa. We will define the above `...All` functions here and we no longer need the `...All` suffix, since it inherently supports the accumulation of errors
+
+```scala
+enum Validated[+E, +A]:
+  case Valid(get: A)
+  case Invalid(errors: List[E])
+```
 
 ## Misc Notes
 
