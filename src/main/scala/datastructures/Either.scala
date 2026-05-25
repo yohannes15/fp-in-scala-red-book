@@ -36,10 +36,15 @@ enum Either[+E, +A]:
     yield f(a, b)
 
   def sequence[E, A](as: List[Either[E, A]]): Either[E, List[A]] =
-    ???
+    // as.foldRight(Right(Nil)) {
+    //   case (a, acc) => a.map2(acc)(_ :: _)
+    // }
+    traverse(as)(a => a)
 
   def traverse[E, A, B](as: List[A])(f: A => Either[E, B]): Either[E, List[B]] =
-    ???
+    as.foldRight(Right(Nil)) {
+      case (a, acc) => f(a).map2(acc)(_ :: _)
+    }
 
 object Either:
   def catchNonFatal[A](a: => A): Either[Throwable, A] =
