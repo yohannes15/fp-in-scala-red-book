@@ -13,7 +13,7 @@ In this chapter we will create the `Option` and `Either` types ourselves and eve
 - `Either` datatype
 - `Try` datatype
 
-### Cons of exceptions
+## Cons of exceptions
 
 Why do exceptions break referential transparency, and why is that a problem?
 
@@ -51,7 +51,7 @@ The two main cons of expressions are:
 - **Exceptions break RT and introduce context dependence**: Moves us away from the simple reasoning of the substitution model, making it possible to write confusing, exception-based code. This is the source of the folkloric advice that exceptions should be used only for error handling, not for control flow.
 - **Exceptions are not type safe**: The type of `failingFn`, `Int => Int` tells us nothing about the fact that exceptions may occur, and the compiler will certainly not force callers of `failingFn` to make a decision about how to handle those exceptions. **If we forget to check for an exception in failingFn, this won’t be detected until runtime.**
 
-## Alternatives to exceptions
+### Alternatives to exceptions
 
 ```scala
 def mean(xs: Seq[Double]): Double =
