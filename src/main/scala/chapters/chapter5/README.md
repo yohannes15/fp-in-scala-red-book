@@ -1,0 +1,83 @@
+# Chapter 5
+
+This chapter covers strictness and laziness.
+
+## Topics
+
+- Strictness vs nonstrictness
+- Introducing lazy lists
+- Separating program description from evaluation
+
+## Intro
+
+In chapter 3, we talked about purely functional data structures, using singly linked lists as an example. We noted that each of these operations makes its own pass over the input and constructs a fresh list for the output.
+
+```scala
+/* 
+How a program is evaluated using substitution model. In each
+transformation scala produces a temporary list that gets used as
+input to the next transformation and is immediately discarded
+*/
+List(1,2,3,4).map(_ + 10).filter(_ % 2 == 0).map(_ * 3)
+List(11,12,13,14).filter(_ % 2 == 0).map(_ * 3)
+List(12,14).map(_ * 3)
+List(36,42)
+```
+
+**Question**: Wouldn’t it be nice if we could fuse sequences of transformations like this into a single pass and avoid creating temporary data structures? We could use a `while` loop, but ideally, we’d like to have this done automatically while retaining high-level compositional style. We want to compose our programs using higher-order functions, like `map` and `filter`, instead of writing monolithic loops.
+
+**Answer**: We can accomplish this fusion by using **nonstrictness (or, less formally, laziness).**. We will define meaning of lazy and work through an implementation of `LazyList` that fuses sequences of transformations. **Nonstrictness is a fundamental technique for improving on the efficiency and modularity of functional programs in general not just this scenario.**
+
+## Strict vs nonstrict functions
+
+**Nonstrictness** is a property of a function. It means that the function may choose not to evaluate one or more of its arguments. In contrast, a **strict** function always evaluates its arguments. Strict functions are the norm usually and most programming languages only support functions that except their arguments fully evaluated. By default, any function defintion in Scala is *strict*, we need to instruct it otherwise.
+
+**Nonstrict functions** examples: 
+
+- Boolean functions `&&` and `||`: We may think of these as built in syntax, but you can think of them as nonstrict functions. `&&` takes two 2 boolean arguments but only evaluates the second argument if the first is true. `||` only evaluates its second argument if the first is false.
+
+- `if` control construct: Again even if it is a language construct, it can be thought of as a function acception 3 parameters: a condition of type Boolean, an expression of Some type A to return in case the condition is true, and another expression of the same type A to return if the condition is false. This is nonstrict since it won't evaluate all of its args. *It is strict in its condition parameter and nonstrict in the two branches for the true and false cases.*
+
+In Scala, we can write *nonstrict* functions by accepting some of our arguments unevaluated. Type `() => A` is a function that accepts zero arguments and returns an `A`. In fact, it is a syntactic alias for the type `Function0[A]`. In general, the unevaluated form of an expression is called a **thunk**, and we can force the thunk to evaluate the expression and get the result. We do so by invoking the function and passing an empty argument list.
+
+Overall, this syntax makes it very clear what’s happening; we’re passing a function of no arguments in place of each nonstrict parameter and then explicitly calling this function to obtain a result in the body (we can call it > 1 times as well). But scala provdies a nicer syntax as seen below in `betterIf`.
+
+The type `=> A` allows us to be succint. We don't need to do anything special to evaluate except just reference it. We say that a nonstrict function in Scala takes its arguments **by name** rather than by value.
+
+```scala
+// Without using the nicer syntax
+def if[A](cond: Boolean, onTrue: () => A, onFalse: () => A): A = 
+    if cond then onTrue() else onFalse()
+
+def betterIf[A](cond: Boolean, onTrue: => A, onFalse: => A): A =
+    if cond then onTrue else onFalse
+
+if(a < 22, () => println("a"), () => println("b"))
+betterIf(a < 22, println("a"), println("b"))
+```
+
+With either syntax, an argument that’s passed unevaluated to a function will be evaluated once for each place it’s referenced in the body of the function. **Scala won't by default cache the result of evaluation!** We can cache the value explicitly if we wish to only evaluate the result once by using the `lazy` keyword.
+
+```scala
+def maybeTwice(b: Boolean, i: => Int): Int = 
+    if b then i + i else 0
+val x = maybeTwice(true, { println("hi"); 1 + 41})
+// hi
+// hi
+// x: Int = 84
+
+def maybeTwice2(b: Boolean, i: => Int): Int = 
+    lazy val j = i
+    if b then j + j else 0
+val x = maybeTwice2(true, { println("hi"); 1 + 41 })
+// hi
+// x: Int = 84
+```
+
+Adding a **`lazy`** keyword to a val declaration will cause Scala to delay evaluation of the right-hand side of that lazy val declaration until its first reference during evaluation of another expression. It will also **cache the result** so subsequent references to it don’t trigger repeated evaluation.
+
+**Formal defintion of strictness**: If the evaluation of an expression runs forever or throws an error instead of returning a definite value, we say the expression doesn't *terminate* or it evaluates to *bottom*. A function f is **strict** if the expression f(x) evaluates to bottom for all X that evaluate to bottom. 
+
+**My defintion**: A strict function evaluates its input before doing anything else. Therefore, if it receives a broken or non-terminating input, the function itself is doomed to fail in the exact same way.
+
+## Lazy lists: An extended example
