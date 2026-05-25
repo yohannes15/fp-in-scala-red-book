@@ -405,7 +405,12 @@ def sequenceAll[E, A](as: List[Either[List[E], A]]): Either[List[E], List[A]] =
 
 ## Validated data type
 
+`Either` is a Monad, operations are chained using `bind` or `flatMap`. This means next step in validation depends on result of previous step. If step1 fails, step2 is never run. Fails Fast.
+
+
 `Either[List[E], A]`, along with functions like `map2All`, `traverseAll`, and `sequenceAll`, gives us the ability to accumulate errors. Instead of defining these related functions in this ad hoc way, we can name this accumulation behavior, as `Validated`. A value of `Validated[E, A]` can be converted to an `Either[List[E], A]` and vice versa. We will define the above `...All` functions here and we no longer need the `...All` suffix, since it inherently supports the accumulation of errors
+
+`Validated` is an Applicative Functor but **not a monad**. Because it is not a monad, operations can't be chained sequentially based on previous results. Instead, it evaluates all validations independently and groups all failures together.
 
 ```scala
 enum Validated[+E, +A]:
@@ -413,7 +418,50 @@ enum Validated[+E, +A]:
   case Invalid(errors: List[E])
 ```
 
+Our type accumulates a `List[E]` of errors. Why `List` though? What if we want to use some other type, like `Vector` or `Tree` or ... As of right now only `map2` depends on errors being modeled as a list (concat errors from two `Invalid` values). Lets redefine as below
+
+```scala
+enum Validated[+E, +A]:
+  case Valid(get: A)
+  case Invalid(errors: E)
+```
+
+At first glance, it appears we’ve taken a step backward by defining `Validated` very much like `Either` is defined. The key difference between this version of `Validated` and `Either` is in the signature of `map2`. In particular, we need a way to combine two invalid values into a single invalid value. In the previous definition of Validated, where Invalid wrapped a `List[E]`, our combining action was *list concatenation*. But with this new definition, **we need a way to combine two E values into a single E value**, and we know nothing about E. It seems like we’re stuck, but we can modify the signature of `map2` and simply ask for such a combining action.
+
+```scala
+enum Validated[+E, +A]:
+  case Valid(get: A)
+  case Invalid(errors: E)
+
+def map2[EE >: E, B, C](
+  b: Validated[EE, B])(
+  f: (A, B) => C)(
+  combineErrors: (EE, EE) => EE
+): Validated[EE, C] = // Look at datastrucutres/Validated.scala
+```
+
+**Final Note**: `Validted`, `sequence`, `traverse`, and `map2` not provided by standard library. Provided by `Cats`.
+
 ## Misc Notes
+
+### `Try[A]`
+
+The `Try` type is like `Either`, except errors are represented as `Throwable` values instead of arbitrary types. By constraining errors to be subtypes of `Throwable`, the Try type is able to provide various convenience operations for code that throws exceptions.
+
+This is basically equivalent to `Either[Throwable, A]`. It has operations that are specialized for working with exceptions. The `Try` type represents a computation that may fail during evaluation by raising an exception. 
+
+[Read API here](https://nightly.scala-lang.org/api/scala/util/Try.html). 
+
+The apply method on the `Try` companion object is equivalent to the catchNonFatal method we defined earlier. `Either` lets us track a precise error type (e.g., `Either[NumberFormatException, Int]`), whereas `Try` tracks `Throwable`.
+
+```scala
+enum Try[+T]:
+  case Failure(exception: Throwable)
+  case Success(value: T)
+
+// LOOK AT datastructures/Try.scala for more
+```
+
 
 ### Throw is an expression
 
@@ -465,7 +513,9 @@ For example, in `def foo(a: A): B`, the **type A is in contravariant position** 
 
 ### By-name vs named arguments
 
-The `default: => B` says that the argument is of type `B`, but it won't be evaluated until its needed by the function. This is called a **by-name parameter** and is a parameter that is only evaluated when it is actually used inside the function body. This is opposite to the usual **named arguments**
+The `default: => B` says that the argument is of type `B`, but it won't be evaluated until its needed by the function. This is called a **by-name parameter** and is a parameter that is only evaluated when it is actually used inside the function body. This is opposite to the usual **named arguments**. Examples from this chapter are `orElse`, `getOrElse` and `catchNonFatal`.
+
+In Scala, **a non-strict (or lazy)** function is one that may choose not to evaluate one or more of its arguments. By default, Scala evaluates arguments strictly, but you can define non-strict parameters using by-name parameters (e.g., => A). This defers evaluation until the argument is accessed within the function body.
 
 ### Parameter lists
 

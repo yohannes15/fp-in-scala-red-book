@@ -1,6 +1,7 @@
 package datastructures
 
 import scala.util.control.NonFatal
+import scala.collection.immutable.List
 
 /** Notes
   *
