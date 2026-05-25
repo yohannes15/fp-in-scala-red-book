@@ -1,4 +1,4 @@
-package datastrucutres
+package datastructures
 
 import scala.util.control.NonFatal
 
