@@ -98,10 +98,10 @@ This looks identical to `List` except the `Cons` data constructor takes *explici
 If we wish to examine or traverse the `LazyList`, we need to force these thunks! Heres an example:
 
 ```scala
-/** optionall extract the head of a LazyList */
+/** optional - extract the head of a LazyList */
 def headOption: Option[A] = this match
     case Empty => None
-    case Cons(h, _) => Some(h()) // forcing of the the h thunk using h()
+    case Cons(h, _) => Some(h()) // forcing of the h thunk using h()
 ```
 
 This ability of `LazyList` to evaluate only the portion actually demanded (we don't evaluate the tail of the Cons) is useful, as we will see!
