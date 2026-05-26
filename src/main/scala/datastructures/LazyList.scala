@@ -88,10 +88,10 @@ enum LazyList[+A]:
     * the lazy list is large and all elements test false.
     */
   def exists(p: A => Boolean): Boolean =
-    this.foldRight(false)((a, b) => p(a) || b)
+    foldRight(false)((a, b) => p(a) || b)
 
   def forAll(p: A => Boolean): Boolean =
-    this.foldRight(true)((a, b) => p(a) && b)
+    foldRight(true)((a, b) => p(a) && b)
 
 object LazyList:
   /** smart constructor for creating nonempty LazyList of particular type */
