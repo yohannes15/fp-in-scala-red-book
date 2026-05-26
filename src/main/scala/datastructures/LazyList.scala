@@ -76,7 +76,7 @@ enum LazyList[+A]:
     case _                   => this
 
   def takeWhile(p: A => Boolean): LazyList[A] =
-    foldRight(Empty)((a, b) => if p(a) then cons(a, b) else empty)
+    foldRight(empty)((a, b) => if p(a) then cons(a, b) else empty)
 
   def headOption: Option[A] =
     foldRight(None)((a, _) => Some(a))
@@ -93,6 +93,18 @@ enum LazyList[+A]:
 
   def forAll(p: A => Boolean): Boolean =
     foldRight(true)((a, b) => p(a) && b)
+
+  def map[B](f: A => B): LazyList[B] =
+    foldRight(empty)((a, acc) => cons(f(a), acc))
+
+  def flatMap[B](f: A => LazyList[B]): LazyList[B] =
+    foldRight(empty)((a, acc) => f(a).append(acc))
+
+  def filter(p: A => Boolean): LazyList[A] =
+    foldRight(empty)((a, acc) => if p(a) then cons(a, acc) else acc)
+
+  def append[A2 >: A](that: => LazyList[A2]): LazyList[A2] =
+    foldRight(that)((a, acc) => cons(a, acc))
 
 object LazyList:
   /** smart constructor for creating nonempty LazyList of particular type */
