@@ -166,6 +166,36 @@ def exists(p: A => Boolean): Boolean = this match
 
 Note that `||` is nonstrict in its second argument. If `p(h())` returns true, then exists terminates the traversal early and returns true as well. Remember also that the tail of the lazy list is a lazy val, so **not only does the traversal terminate early, but the tail of the lazy list is never evaluated at all! So whatever code would have generated the tail is never actually executed.**
 
+#### Looking at implementation of `map`, `flatMap`, `foldRight`... in `LazyList`
+
+These implementaions are incremental. They don't fully generate their answers. It's not until some other computation looks at the elements of the resulting `LazyList` that the computation to generate that `LazyList` actually takes place - and then it will do just enough work to generate the requestd elements. Because of this incremental nature, we can call these functions one after another without fully instantiating the intermediate results. 
+
+Let’s look at a simplified program trace for (a fragment of) the motivating example we started this chapter with. We’ll convert this expression to a `List` to force evaluation. Take a minute to work through this trace to understand what’s happening. Remember that a trace like this is just the same expression repeated multiple times, evaluated by one more step each time.
+
+```scala
+LazyList(1, 2, 3, 4).map(_ + 10).filter(_ % 2 == 0).toList
+cons(11, LazyList(2, 3, 4).map(_ + 10)).filter(_ % 2 == 0).toList   // #1
+LazyList(2, 3, 4).map(_ + 10).filter(_ % 2 == 0).toList             // #2
+cons(12, LazyList(3, 4).map(_ + 10)).filter(_ % 2 == 0).toList      // #3
+12 :: LazyList(3, 4).map(_ + 10).filter(_ % 2 == 0).toList          // #4
+12 :: cons(13, LazyList(4).map(_ + 10)).filter(_ % 2 == 0).toList
+12 :: LazyList(4).map(_ + 10).filter(_ % 2 == 0).toList
+12 :: cons(14, LazyList().map(_ + 10)).filter(_ % 2 == 0).toList
+12 :: 14 :: LazyList().map(_ + 10).filter(_ % 2 == 0).toList        // #5
+12 :: 14 :: List()                                                  // #6
+
+// #1 Apply map to the first element.
+// #2 Apply filter to the first element.
+// #3 Apply map to the second element.
+// #4 Apply filter to the second element. Produce the first element of the result.
+// #5 Apply filter to the fourth element, and produce the final element of the result.
+// #6 map and filter have no more work to do, and the empty lazy list becomes the empty list.
+```
+
+Notice in this trace is **how the filter and map transformations are interleaved**—the computation alternates between generating a single element of the output of map and testing with filter to see if that element is divisible by 2 (adding it to the output list if it is). **Note that we don’t fully instantiate the intermediate lazy list that results from the map. It’s exactly as if we had interleaved the logic using a special-purpose loop**. 
+
+For this reason, people sometimes describe lazy lists as **first-class loops whose logic can be combined using higher-order functions, like map and filter.** That is a **core philosophy of Functional Programming — treating data as a stream and transformations as the control flow**. By using lazy lists (also called Streams or Generators), you effectively decouple the definition of a loop from its execution. This concept describes functional iteration, where **loops are treated as data structures (lazy lists or streams) rather than control flow statements**. Instead of manually managing a loop's state with for or while, you define what should happen to the data using a pipeline of transformations.
+
 ## Misc Notes 
 
 ### Smart Constructors
