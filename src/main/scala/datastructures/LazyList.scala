@@ -14,6 +14,19 @@ enum LazyList[+A]:
     case Empty      => Nil
     case Cons(h, t) => h() :: t().toList
 
+  /** If f chooses not to evaluate its second parameter, the traversal is
+    * terminated early; we can see this by using foldRight to implement exists
+    *
+    * Since foldRight can terminate the traversal early, we can reuse it to
+    * implement exists, which we can’t do with a strict version of foldRight;
+    * we’d have to write a specialized recursive exists function to handle early
+    * termination. Laziness makes our code more reusable.
+    */
+  def foldRight[B](acc: => B)(f: (A, => B) => B): B =
+    this match
+      case Cons(h, t) => f(h(), t().foldRight(acc)(f))
+      case _          => acc
+
   /** Stack safe because the recursive call is passed as cons's by-name tail.
     * take returns after building one Cons; the rest is evaluated only when
     * forced. the recursive call is suspended until the tail of the returned
@@ -44,28 +57,18 @@ enum LazyList[+A]:
     case Empty      => None
     case Cons(h, _) => Some(h()) // forcing of the the h thunk using h()
 
-  /** If f chooses not to evaluate its second parameter, the traversal is
-    * terminated early; we can see this by using foldRight to implement exists
-    *
-    * Since foldRight can terminate the traversal early, we can reuse it to
-    * implement exists, which we can’t do with a strict version of foldRight;
-    * we’d have to write a specialized recursive exists function to handle early
-    * termination. Laziness makes our code more reusable.
-    */
-  def foldRight[B](acc: => B)(f: (A, => B) => B): B =
-    this match
-      case Cons(h, t) => f(h(), t().foldRight(acc)(f))
-      case _          => acc
-
   /** Here [[b]] is the unevaluated recursive step that folds the tail of the
     * lazy list. If [[p(a)]] returns true, [[b]] will never be evaluated, and
     * the computation will terminate early.
+    *
+    * NOTE: This definition of exists, though illustrative, isn’t stack safe if
+    * the lazy list is large and all elements test false.
     */
   def exists(p: A => Boolean): Boolean =
     this.foldRight(false)((a, b) => p(a) || b)
-    // this match
-    //  case Cons(h, t) => p(h()) || t().exists(p)
-    //  case _          => false
+
+  def forAll(p: A => Boolean): Boolean =
+    ???
 
 object LazyList:
   /** smart constructor for creating nonempty LazyList of particular type */
