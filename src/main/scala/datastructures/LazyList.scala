@@ -42,20 +42,43 @@ enum LazyList[+A]:
     case Cons(h, t) if n == 1 => cons(h(), empty)
     case _                    => empty
 
+  /** Implements `take` with `foldRight` by making the fold produce a function
+    * `Int => LazyList[A]`.
+    *
+    * The extra `Int` argument is the remaining number of elements to keep.
+    * `foldRight` gives us the current element and a lazy folded tail; wrapping
+    * the result in a function lets each step decide whether to include the
+    * current element, stop at exactly one element, or return `empty`.
+    *
+    * The initial `n <= 0` check avoids forcing the head just to build the
+    * folded function, preserving the same behavior as `take(0)`.
+    */
+  def takeUsingFoldRight(n: Int): LazyList[A] =
+    if n <= 0 then empty
+    else
+      /** Since foldRight doesn’t naturally track an index/count, returning a
+        * function Int => LazyList[A] is the standard trick for threading the
+        * remaining count through the fold.
+        */
+      val takeFn: Int => LazyList[A] =
+        foldRight((i: Int) => Empty) {
+          (a, nextFunc) => (i: Int) =>
+            if i > 1 then cons(a, nextFunc(i - 1))
+            else if i == 1 then cons(a, empty)
+            else empty
+        }
+      takeFn(n)
+
   @tailrec
   final def drop(n: Int): LazyList[A] = this match
     case Cons(h, t) if n > 0 => t().drop(n - 1)
     case _                   => this
 
-  /** Stack safety again comes from laziness not tail recursion. */
-  def takeWhile(p: A => Boolean): LazyList[A] = this match
-    case Cons(h, t) if p(h()) => cons(h(), t().takeWhile(p))
-    case _                    => empty
+  def takeWhile(p: A => Boolean): LazyList[A] =
+    foldRight(Empty)((a, b) => if p(a) then cons(a, b) else empty)
 
-  /** optionall extract the head of a LazyList */
-  def headOption: Option[A] = this match
-    case Empty      => None
-    case Cons(h, _) => Some(h()) // forcing of the the h thunk using h()
+  def headOption: Option[A] =
+    foldRight(None)((a, _) => Some(a))
 
   /** Here [[b]] is the unevaluated recursive step that folds the tail of the
     * lazy list. If [[p(a)]] returns true, [[b]] will never be evaluated, and
@@ -68,7 +91,7 @@ enum LazyList[+A]:
     this.foldRight(false)((a, b) => p(a) || b)
 
   def forAll(p: A => Boolean): Boolean =
-    ???
+    this.foldRight(true)((a, b) => p(a) && b)
 
 object LazyList:
   /** smart constructor for creating nonempty LazyList of particular type */
