@@ -5,10 +5,11 @@ import scala.annotation.tailrec
 import scala.collection.immutable.List
 
 enum LazyList[+A]:
-  import LazyList.*
   case Empty
   /* nonempty lazy list consists of nonstrict head and tail.*/
   case Cons(h: () => A, t: () => LazyList[A])
+
+  import LazyList.*
 
   def toList: List[A] = this match
     case Empty      => Nil
