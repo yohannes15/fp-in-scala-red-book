@@ -46,7 +46,7 @@ object List:
   def foldRightNonStackSafe[A, B](as: List[A], acc: B, f: (A, B) => B): B =
     as match
       case Nil         => acc
-      case Cons(x, xs) => f(x, foldRight(xs, acc, f))
+      case Cons(x, xs) => f(x, foldRightNonStackSafe(xs, acc, f))
 
   /** Reverse the input list and then foldLeft with the result, flipping the
     * order of the parameters passed to the combining function
