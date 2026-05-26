@@ -146,6 +146,26 @@ def apply[A](as: (=> A)*): LazyList[A] = ???
 ```
 But scala doesn't support this syntax. We will discuss other ways of **lazily constructing a LazyList** later in this chapter.
 
+## Separating program description from evaluation
+
+A major theme in functional programming is **separation of concerns**. We want to **separate the description of computations from actually running them.** Examples:
+
+- `first-class functions` capture some computation in their bodies but only execute it once they receive their arguments.
+- `Option` to capture the fact that an error occurred, where the decision of what to do became a separate concern. 
+- `LazyList`, we’re able to build up a computation that produces a sequence of elements without running the steps of that computation until we need those elements.
+
+**NOTE: Laziness lets us separate the description of an expression from the evaluation of that expression. **
+
+We may choose to describe a larger expression than we need and then evaluate only a portion of it. Example, lets look at function `exists` that checks whether an element matching a `Boolean` function exists in this `LazyList`:
+
+```scala
+def exists(p: A => Boolean): Boolean = this match
+    case Cons(h, t) => p(h()) || t().exists(p)
+    case _          => false
+```
+
+Note that `||` is nonstrict in its second argument. If `p(h())` returns true, then exists terminates the traversal early and returns true as well. Remember also that the tail of the lazy list is a lazy val, so **not only does the traversal terminate early, but the tail of the lazy list is never evaluated at all! So whatever code would have generated the tail is never actually executed.**
+
 ## Misc Notes 
 
 ### Smart Constructors
