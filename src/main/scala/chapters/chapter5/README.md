@@ -239,6 +239,14 @@ This incremental nature of lazy list transformations also has important conseque
 
 For instance, in above example, the garbage collector can reclaim the space allocated for the values `11` and `13` emitted by `map` as soon as `filter` determines they aren’t needed. Of course, this is a simple example; in other situations, we can be dealing with larger numbers of elements, and the lazy list elements themselves could be large objects that retain significant amounts of memory. Being able to reclaim this memory as quickly as possible can cut down on the amount of memory required by your program as a whole.
 
+`foldRight` passes its accumulator by-name to enable short-circuiting and infinite stream evaluation, while `scanRight` is strict because it inherently requires traversing the entire remaining collection to build and return a complete cumulative sequence.
+
+```scala
+def scanRight[B](b: B)(f: (A, => B) => B): LazyList[B]
+def foldRight[B](b: => B)(f: (A, =>B) => B): LazyList[B]
+```
+
+
 ## Infinite lazy lists and corecursion
 
 Because they're incremental, functions we've written also work for *infinite lazy lists.* Example of an infinite `LazyList` of 1s:
@@ -298,6 +306,18 @@ val ones: LazyList[Int] = cons(1, ones)
 ```
 
 **The recursive definition consumes constant memory, even if we keep a reference to it around while traversing it, while the unfold-based implementation does not. Preserving sharing isn’t something we usually rely on when programming with lazy lists since it’s extremely delicate and not tracked by the types. For instance, sharing is destroyed when calling even `xs.map(x => x)`.**
+
+#### hasSubsequence (List vs LazyList implementation in datastructures)
+
+With strict lists and list-processing functions, we were forced to write a rather tricky monolithic loop to implement `hasSubsequence` without doing extra work. Using LazyList's `startsWith` and `tails`, this impl performs the same number of steps as a more monolithic implementation using nested loops with logic for breaking out of each loop early. By using laziness, we can compose this function from simpler components and still retain the efficiency of the more specialized (and verbose) implementation. 
+ 
+```scala
+def hasSubsequence[A](l: LazyList[A]): Boolean = 
+    tails.exists(t => t.startsWith(l))
+```
+
+The small example of assembling `hasSubsequence` from simpler functions using laziness was created by Cale Gibbard. 
+[See this for original post by Cale](https://web.archive.org/web/20150330105007/http://lambda-the-ultimate.org/node/1277#comment-14313) 
 
 ## Misc Notes 
 
