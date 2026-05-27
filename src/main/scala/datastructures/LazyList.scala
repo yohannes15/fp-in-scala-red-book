@@ -108,19 +108,10 @@ enum LazyList[+A]:
   def zip[B](that: LazyList[B]): LazyList[(A, B)] =
     zipWith(that)((_, _))
 
-  /** continue traversal as long as either lazy list has more elements */
-  def zipAll[B](that: LazyList[B]): LazyList[(Option[A], Option[B])] =
-    unfold((this, that)) {
-      case (Empty, Empty)             => None
-      case (Cons(h, t), Empty)        => Some((Some(h()), None), (t(), Empty))
-      case (Empty, Cons(h2, t2))      => Some((None, Some(h2())), (Empty, t2()))
-      case (Cons(h, t), Cons(h2, t2)) =>
-        Some((Some(h()), Some(h2())), (t(), t2()))
-    }
-
-  def zipAll2[B](s2: LazyList[B]): LazyList[(Option[A], Option[B])] =
+  def zipAll[B](s2: LazyList[B]): LazyList[(Option[A], Option[B])] =
     zipWithAll(s2)((_, _))
 
+  /** continue traversal as long as either lazy list has more elements */
   def zipWithAll[B, C](that: LazyList[B])(f: (Option[A], Option[B]) => C)
       : LazyList[C] =
     unfold((this, that)) {
@@ -130,6 +121,15 @@ enum LazyList[+A]:
       case (Cons(h1, t1), Cons(h2, t2)) =>
         Some(f(Some(h1()), Some(h2())), (t1(), t2()))
     }
+
+  def startsWith[A](prefix: LazyList[A]): Boolean =
+    ???
+
+  def tails: LazyList[LazyList[A]] =
+    ???
+
+  def scanRight[B](init: B, f: (A, => B) => B): LazyList[B] =
+    ???
 
 object LazyList:
   /** smart constructor for creating nonempty LazyList of particular type */
