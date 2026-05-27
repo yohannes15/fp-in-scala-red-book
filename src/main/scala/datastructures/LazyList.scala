@@ -11,17 +11,21 @@ enum LazyList[+A]:
 
   import LazyList.*
 
-  def toList: List[A] = this match
+  def toListRecursive: List[A] = this match
     case Empty      => Nil
     case Cons(h, t) => h() :: t().toList
+
+  def toList: List[A] =
+    @tailrec
+    def go(l: LazyList[A], acc: List[A]): List[A] = l match
+      case Cons(h, t) => go(t(), h() :: acc)
+      case Empty      => acc
+    go(this, Nil).reverse
 
   def foldRight[B](acc: => B)(f: (A, => B) => B): B =
     this match
       case Cons(h, t) => f(h(), t().foldRight(acc)(f))
       case _          => acc
-
-  def takeWhile(p: A => Boolean): LazyList[A] =
-    foldRight(empty)((a, b) => if p(a) then cons(a, b) else empty)
 
   def headOption: Option[A] =
     foldRight(None)((a, _) => Some(a))
@@ -81,10 +85,51 @@ enum LazyList[+A]:
         }
       takeFn(n)
 
+  def takeWhile(p: A => Boolean): LazyList[A] =
+    foldRight(empty)((a, b) => if p(a) then cons(a, b) else empty)
+
+  def takeWhileViaUnfold(p: A => Boolean): LazyList[A] =
+    unfold(this) {
+      case Cons(h, t) if p(h()) => Some((h(), t()))
+      case _                    => None
+    }
+
   @tailrec
   final def drop(n: Int): LazyList[A] = this match
     case Cons(h, t) if n > 0 => t().drop(n - 1)
     case _                   => this
+
+  def zipWith[B, C](that: LazyList[B])(f: (A, B) => C): LazyList[C] =
+    unfold((this, that)) {
+      case (Cons(h, t), Cons(h2, t2)) => Some((f(h(), h2()), (t(), t2())))
+      case _                          => None
+    }
+
+  def zip[B](that: LazyList[B]): LazyList[(A, B)] =
+    zipWith(that)((_, _))
+
+  /** continue traversal as long as either lazy list has more elements */
+  def zipAll[B](that: LazyList[B]): LazyList[(Option[A], Option[B])] =
+    unfold((this, that)) {
+      case (Empty, Empty)             => None
+      case (Cons(h, t), Empty)        => Some((Some(h()), None), (t(), Empty))
+      case (Empty, Cons(h2, t2))      => Some((None, Some(h2())), (Empty, t2()))
+      case (Cons(h, t), Cons(h2, t2)) =>
+        Some((Some(h()), Some(h2())), (t(), t2()))
+    }
+
+  def zipAll2[B](s2: LazyList[B]): LazyList[(Option[A], Option[B])] =
+    zipWithAll(s2)((_, _))
+
+  def zipWithAll[B, C](that: LazyList[B])(f: (Option[A], Option[B]) => C)
+      : LazyList[C] =
+    LazyList.unfold((this, that)) {
+      case (Empty, Empty)      => None
+      case (Cons(h, t), Empty) => Some(f(Some(h()), None), (t(), Empty))
+      case (Empty, Cons(h, t)) => Some(f(None, Some(h())), (empty, t()))
+      case (Cons(h1, t1), Cons(h2, t2)) =>
+        Some(f(Some(h1()), Some(h2())), (t1(), t2()))
+    }
 
 object LazyList:
   /** smart constructor for creating nonempty LazyList of particular type */
