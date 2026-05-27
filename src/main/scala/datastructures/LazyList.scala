@@ -107,8 +107,8 @@ enum LazyList[+A]:
 
   def zip[B](that: LazyList[B]): LazyList[(A, B)] = zipWith(that)((_, _))
 
-  def zipAll[B](s2: LazyList[B]): LazyList[(Option[A], Option[B])] =
-    zipWithAll(s2)((_, _))
+  def zipAll[B](that: LazyList[B]): LazyList[(Option[A], Option[B])] =
+    zipWithAll(that)((_, _))
 
   /** continue traversal as long as either lazy list has more elements */
   def zipWithAll[B, C](that: LazyList[B])(f: (Option[A], Option[B]) => C)
@@ -122,7 +122,7 @@ enum LazyList[+A]:
     }
 
   def startsWith[A](prefix: LazyList[A]): Boolean =
-    ???
+    zipAll(prefix).takeWhile(_._2.isDefined).forAll((a, a2) => a == a2)
 
   def tails: LazyList[LazyList[A]] =
     ???
