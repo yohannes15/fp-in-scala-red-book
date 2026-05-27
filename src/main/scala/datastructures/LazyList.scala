@@ -105,8 +105,7 @@ enum LazyList[+A]:
       case _                          => None
     }
 
-  def zip[B](that: LazyList[B]): LazyList[(A, B)] =
-    zipWith(that)((_, _))
+  def zip[B](that: LazyList[B]): LazyList[(A, B)] = zipWith(that)((_, _))
 
   def zipAll[B](s2: LazyList[B]): LazyList[(Option[A], Option[B])] =
     zipWithAll(s2)((_, _))
