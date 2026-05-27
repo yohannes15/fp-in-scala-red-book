@@ -123,7 +123,7 @@ enum LazyList[+A]:
 
   def zipWithAll[B, C](that: LazyList[B])(f: (Option[A], Option[B]) => C)
       : LazyList[C] =
-    LazyList.unfold((this, that)) {
+    unfold((this, that)) {
       case (Empty, Empty)      => None
       case (Cons(h, t), Empty) => Some(f(Some(h()), None), (t(), Empty))
       case (Empty, Cons(h, t)) => Some(f(None, Some(h())), (empty, t()))
