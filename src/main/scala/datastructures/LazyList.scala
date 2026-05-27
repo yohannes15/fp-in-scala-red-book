@@ -99,6 +99,7 @@ enum LazyList[+A]:
     case Cons(h, t) if n > 0 => t().drop(n - 1)
     case _                   => this
 
+  /** traverse as long as both lazy lists have more elements */
   def zipWith[B, C](that: LazyList[B])(f: (A, B) => C): LazyList[C] =
     unfold((this, that)) {
       case (Cons(h, t), Cons(h2, t2)) => Some((f(h(), h2()), (t(), t2())))
@@ -110,7 +111,7 @@ enum LazyList[+A]:
   def zipAll[B](that: LazyList[B]): LazyList[(Option[A], Option[B])] =
     zipWithAll(that)((_, _))
 
-  /** continue traversal as long as either lazy list has more elements */
+  /** traverse as long as either lazy list has more elements */
   def zipWithAll[B, C](that: LazyList[B])(f: (Option[A], Option[B]) => C)
       : LazyList[C] =
     unfold((this, that)) {
@@ -125,10 +126,18 @@ enum LazyList[+A]:
     zipAll(prefix).takeWhile(_._2.isDefined).forAll((a, a2) => a == a2)
 
   def tails: LazyList[LazyList[A]] =
-    ???
+    unfold(this) {
+      case l @ Cons(_, t) => Some(l, t())
+      case _              => None
+    }.append(Empty)
 
   def scanRight[B](init: B, f: (A, => B) => B): LazyList[B] =
-    ???
+    foldRight(init -> cons(init, Empty)) {
+      case (a, b) =>
+        lazy val (foldAcc, intermediateResults) = b
+        val newAcc = f(a, foldAcc)
+        newAcc -> cons(newAcc, intermediateResults)
+    }._2
 
 object LazyList:
   /** smart constructor for creating nonempty LazyList of particular type */
