@@ -125,18 +125,30 @@ object LazyList:
     if as.isEmpty then empty
     else cons(as.head, apply(as.tail*))
 
-  def continually[A](a: A): LazyList[A] =
-    ???
+  def continually[A](a: A): LazyList[A] = cons(a, continually(a))
+  def from(n: Int): LazyList[Int] = cons(n, from(n + 1))
 
-  /** In Scala, the [[Int]] type is a 32-bit signed integer, so this lazy list
-    * will switch from positive to negative values at some point and will repeat
-    * itself after about four billion elements.
+  /** corecursive general LazyList-building function. It takes an initial state
+    * and a function. The function evaluates the state and returns an Option
+    * containing the current value and the next state. As long as it returns
+    * Some, the structure continues to grow stack safe because Cons lazily
+    * evaluates its arguments.
     */
-  def from(n: Int): LazyList[Int] =
-    ???
-
-  def fibs: LazyList[Int] =
-    ???
-
   def unfold[A, S](state: S)(f: S => Option[(A, S)]): LazyList[A] =
-    ???
+    f(state) match
+      case Some((a, s)) => cons(a, unfold(s)(f))
+      case _            => empty
+
+  val ones: LazyList[Int] = cons(1, ones)
+
+  // 0, 1, 1, 2, 3, 5, 8, 13, ...
+  def fibs: LazyList[Int] =
+    /** a recursive auxiliary function that tracks the current and next
+      * Fibonacci numbers. When it’s evaluated, it returns a lazy list with the
+      * current Fibonacci number as the head and a recursive call as the tail,
+      * shifting the next number into the current position and computing a new
+      * next by summing current and next
+      */
+    def go(curr: Int, nxt: Int): LazyList[Int] =
+      cons(curr, go(nxt, curr + nxt))
+    go(0, 1)

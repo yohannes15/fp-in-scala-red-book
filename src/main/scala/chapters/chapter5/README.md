@@ -263,6 +263,35 @@ ones.forAll(_ != 1)
 
 In each case, we get back a result immediately. **Be careful, though, since it’s easy to write expressions that never terminate or aren’t stack safe**. For example, `ones.forAll(_ == 1)` will forever need to inspect more of the series since it’ll never encounter an element that allows it to terminate with a definite answer (this will manifest as a stack overflow rather than an infinite loop). *It’s possible to define a stack-safe version of forAll using an ordinary recursive loop.*
 
+#### unfold is a `corecursive` function
+
+**Corecursion generates data progressively from an initial state**. Unlike standard recursion—which takes an input and breaks it down until it hits a base case—corecursion starts at a base case and builds an output outward, often creating infinite data structures (like Streams) by computing elements on demand. In Scala, the most common way to implement corecursion is using `LazyList` along with unfold. It takes an initial state and a function. The function evaluates the state and returns an Option containing the current value and the next state. As long as it returns Some, the structure continues to grow.
+
+```scala
+/** general LazyList-building function.It takes an initial state and a
+    * function for producing both the current value and the next state in the
+    * generated lazy list. recursion is stack safe because Cons lazily evaluates
+    * its arguments
+    */
+  def unfold[A, S](state: S)(f: S => Option[(A, S)]): LazyList[A] =
+    f(state) match
+      case Some((a, s)) => cons(a, unfold(s)(f))
+      case _            => empty
+```
+
+Recursive functions consume data and terminate by recursing on smaller inputs, while **a corecursive function produces data and need not terminate so long as they remain *productive*, which just means we can always evaluate more of the result in a finite amount of time.** The `unfold` function is productive as long as `f` terminates since we just need to run the function `f` one more time to generate the next element of the `LazyList`. Corecursion is also sometimes called **guarded recursion**, and productivity is also sometimes called **cotermination**.
+
+```scala
+// Generates a LazyList starting at 1, incrementing infinitely
+val infiniteNumbers: LazyList[Int] = LazyList.unfold(1) { state =>
+  Some((state, state + 1)) // (Current Value, Next State)
+}
+// Take the first 5 elements to evaluate them
+infiniteNumbers.take(5).foreach(println) 
+// 1, 2, 3, 4, 5
+
+```
+
 ## Misc Notes 
 
 ### Smart Constructors
