@@ -289,8 +289,15 @@ val infiniteNumbers: LazyList[Int] = LazyList.unfold(1) { state =>
 // Take the first 5 elements to evaluate them
 infiniteNumbers.take(5).foreach(println) 
 // 1, 2, 3, 4, 5
-
 ```
+
+Using `unfold` to define `continually` and `ones` means **we don’t get sharing** as in the recursive definition: 
+
+```scala
+val ones: LazyList[Int] = cons(1, ones)
+```
+
+**The recursive definition consumes constant memory, even if we keep a reference to it around while traversing it, while the unfold-based implementation does not. Preserving sharing isn’t something we usually rely on when programming with lazy lists since it’s extremely delicate and not tracked by the types. For instance, sharing is destroyed when calling even `xs.map(x => x)`.**
 
 ## Misc Notes 
 
