@@ -166,7 +166,7 @@ def exists(p: A => Boolean): Boolean = this match
 
 Note that `||` is nonstrict in its second argument. If `p(h())` returns true, then exists terminates the traversal early and returns true as well. Remember also that the tail of the lazy list is a lazy val, so **not only does the traversal terminate early, but the tail of the lazy list is never evaluated at all! So whatever code would have generated the tail is never actually executed.**
 
-#### Looking at implementation of `map`, `flatMap`, `foldRight`... in `LazyList`
+### Looking at implementation of `map`, `flatMap`, `foldRight`... in `LazyList`
 
 These implementaions are incremental. They don't fully generate their answers. It's not until some other computation looks at the elements of the resulting `LazyList` that the computation to generate that `LazyList` actually takes place - and then it will do just enough work to generate the requestd elements. Because of this incremental nature, we can call these functions one after another without fully instantiating the intermediate results. 
 
@@ -192,9 +192,76 @@ cons(12, LazyList(3, 4).map(_ + 10)).filter(_ % 2 == 0).toList      // #3
 // #6 map and filter have no more work to do, and the empty lazy list becomes the empty list.
 ```
 
-Notice in this trace is **how the filter and map transformations are interleaved**—the computation alternates between generating a single element of the output of map and testing with filter to see if that element is divisible by 2 (adding it to the output list if it is). **Note that we don’t fully instantiate the intermediate lazy list that results from the map. It’s exactly as if we had interleaved the logic using a special-purpose loop**. 
+#### Why map and filter alternate
+
+The entire computation is demand-driven — `toList` pulls elements one at a time, and `map/filter` each produce only what's needed to satisfy that demand. The alternation comes from three by-name/lazy mechanisms working together.
+
+1. `cons` has a by-name tail
+```scala
+def cons[A](hd: => A, tl: => LazyList[A]): LazyList[A]
+```
+Both `hd` and `tl` are by-name `(=> A)`, meaning they are not evaluated when cons is called. They become thunks. This is the fundamental building block.
+
+2. `map` and `filter` both use foldRight, whose accumulator is by-name
+
+```scala
+def foldRight[B](acc: => B)(f: (A, => B) => B): B
+//                                    ^^^^
+//                          acc in f is by-name!
+```
+
+The second parameter of the folding function f is by-name. This means the recursive call on the tail (which becomes acc in f) is only forced when f actually uses it. **It's suspended until someone calls `t()` on the resulting `Cons`.**
+
+3. `toList` is strict — it's the "demand engine"
+
+```scala
+def toList: List[A] = this match
+  case Cons(h, t) => h() :: t().toList
+  ... 
+```
+
+This forces one head at a time, then recurses on the tail. Each `t()` call forces the next thunk.
+
+---
+
+Notice in this trace is **how the `filter` and `map` transformations are interleaved**—the computation alternates between generating a single element of the output of `map` and testing with `filter` to see if that element is divisible by 2 (adding it to the output list if it is). **Note that we don’t fully instantiate the intermediate lazy list that results from the map. It’s exactly as if we had interleaved the logic using a special-purpose loop**. 
 
 For this reason, people sometimes describe lazy lists as **first-class loops whose logic can be combined using higher-order functions, like map and filter.** That is a **core philosophy of Functional Programming — treating data as a stream and transformations as the control flow**. By using lazy lists (also called Streams or Generators), you effectively decouple the definition of a loop from its execution. This concept describes functional iteration, where **loops are treated as data structures (lazy lists or streams) rather than control flow statements**. Instead of manually managing a loop's state with for or while, you define what should happen to the data using a pipeline of transformations.
+
+Since intermediate lazy lists aren’t instantiated, it’s easy to reuse existing operations in novel ways without having to worry that we’re doing more processing of the lazy list than necessary. As example, we can reuse `filter` to define `find`, a method that returns just the first element that matches if it exists. Even though `filter` transforms the whole lazy list, that transfomration is done **lazily**, so `find` terminates as soon as a match is found
+
+```scala
+def find(p: A => Boolean): Option[A] =
+  filter(p).headOption
+```
+
+This incremental nature of lazy list transformations also has important consequences for memory usage. **A transformation of the lazy list requires only enough working memeory to store and transform the current element because intermediate lazy lists aren't generated.** 
+
+For instance, in above example, the garbage collector can reclaim the space allocated for the values `11` and `13` emitted by `map` as soon as `filter` determines they aren’t needed. Of course, this is a simple example; in other situations, we can be dealing with larger numbers of elements, and the lazy list elements themselves could be large objects that retain significant amounts of memory. Being able to reclaim this memory as quickly as possible can cut down on the amount of memory required by your program as a whole.
+
+## Infinite lazy lists and corecursion
+
+Because they're incremental, functions we've written also work for *infinite lazy lists.* Example of an infinite `LazyList` of 1s:
+
+```scala
+lazy val ones: LazyList[Int] = LazyList.cons(1, ones)
+```
+
+Although `ones` is infinite, the functions we’ve written so far only inspect the portion of the lazy list needed to generate the demanded output. For example:
+
+```scala
+ones.take(5).toList
+// List[Int] = List(1, 1, 1, 1, 1)
+ones.exists(_ % 2 != 0)
+// Boolean = true
+ones.map(_ + 1).exists(_ % 2 == 0)
+ones.takeWhile(_ == 1)
+ones.forAll(_ != 1)
+
+// Expressions that only eval a finite number of lazy list elements can accept an infinite lazy list as input
+```
+
+In each case, we get back a result immediately. **Be careful, though, since it’s easy to write expressions that never terminate or aren’t stack safe**. For example, `ones.forAll(_ == 1)` will forever need to inspect more of the series since it’ll never encounter an element that allows it to terminate with a definite answer (this will manifest as a stack overflow rather than an infinite loop). *It’s possible to define a stack-safe version of forAll using an ordinary recursive loop.*
 
 ## Misc Notes 
 

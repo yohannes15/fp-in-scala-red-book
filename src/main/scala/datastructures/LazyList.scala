@@ -28,6 +28,40 @@ enum LazyList[+A]:
       case Cons(h, t) => f(h(), t().foldRight(acc)(f))
       case _          => acc
 
+  def takeWhile(p: A => Boolean): LazyList[A] =
+    foldRight(empty)((a, b) => if p(a) then cons(a, b) else empty)
+
+  def headOption: Option[A] =
+    foldRight(None)((a, _) => Some(a))
+
+  /** Here [[b]] is the unevaluated recursive step that folds the tail of the
+    * lazy list. If [[p(a)]] returns true, [[b]] will never be evaluated, and
+    * the computation will terminate early.
+    *
+    * NOTE: This definition of exists, though illustrative, isn’t stack safe if
+    * the lazy list is large and all elements test false.
+    */
+  def exists(p: A => Boolean): Boolean =
+    foldRight(false)((a, b) => p(a) || b)
+
+  def forAll(p: A => Boolean): Boolean =
+    foldRight(true)((a, b) => p(a) && b)
+
+  def map[B](f: A => B): LazyList[B] =
+    foldRight(empty)((a, acc) => cons(f(a), acc))
+
+  def flatMap[B](f: A => LazyList[B]): LazyList[B] =
+    foldRight(empty)((a, acc) => f(a).append(acc))
+
+  def filter(p: A => Boolean): LazyList[A] =
+    foldRight(empty)((a, acc) => if p(a) then cons(a, acc) else acc)
+
+  def find(p: A => Boolean): Option[A] =
+    filter(p).headOption
+
+  def append[A2 >: A](that: => LazyList[A2]): LazyList[A2] =
+    foldRight(that)((a, acc) => cons(a, acc))
+
   /** Stack safe because the recursive call is passed as cons's by-name tail.
     * take returns after building one Cons; the rest is evaluated only when
     * forced. the recursive call is suspended until the tail of the returned
@@ -75,37 +109,6 @@ enum LazyList[+A]:
     case Cons(h, t) if n > 0 => t().drop(n - 1)
     case _                   => this
 
-  def takeWhile(p: A => Boolean): LazyList[A] =
-    foldRight(empty)((a, b) => if p(a) then cons(a, b) else empty)
-
-  def headOption: Option[A] =
-    foldRight(None)((a, _) => Some(a))
-
-  /** Here [[b]] is the unevaluated recursive step that folds the tail of the
-    * lazy list. If [[p(a)]] returns true, [[b]] will never be evaluated, and
-    * the computation will terminate early.
-    *
-    * NOTE: This definition of exists, though illustrative, isn’t stack safe if
-    * the lazy list is large and all elements test false.
-    */
-  def exists(p: A => Boolean): Boolean =
-    foldRight(false)((a, b) => p(a) || b)
-
-  def forAll(p: A => Boolean): Boolean =
-    foldRight(true)((a, b) => p(a) && b)
-
-  def map[B](f: A => B): LazyList[B] =
-    foldRight(empty)((a, acc) => cons(f(a), acc))
-
-  def flatMap[B](f: A => LazyList[B]): LazyList[B] =
-    foldRight(empty)((a, acc) => f(a).append(acc))
-
-  def filter(p: A => Boolean): LazyList[A] =
-    foldRight(empty)((a, acc) => if p(a) then cons(a, acc) else acc)
-
-  def append[A2 >: A](that: => LazyList[A2]): LazyList[A2] =
-    foldRight(that)((a, acc) => cons(a, acc))
-
 object LazyList:
   /** smart constructor for creating nonempty LazyList of particular type */
   def cons[A](hd: => A, tl: => LazyList[A]): LazyList[A] =
@@ -121,3 +124,4 @@ object LazyList:
   def apply[A](as: A*): LazyList[A] =
     if as.isEmpty then empty
     else cons(as.head, apply(as.tail*))
+
