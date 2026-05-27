@@ -270,3 +270,7 @@ In each case, we get back a result immediately. **Be careful, though, since itâ€
 Smart constructors are functions for constructing data types that ensure some additional invariant or provide a slightly different signature than the real constructors. By convention, they are typically lowercase the first letter of the corresponding data constructor. E.g for `Cons(...)` it would be `def cons(...)`.
 
 Recall that Scala uses subtyping to represent data constructors, but we almost always want to infer `LazyList` as the type, not `Cons` or `Empty`. Making smart constructors that return the base type is a common trick, though one that was more important in Scala 2 than Scala 3, as Scala 3 will generally prefer to infer the type of the enum (e.g., `LazyList[A]`) instead of the type of the data constructor (e.g., `Cons[A]`).] We can see how both smart constructors are used in the `LazyList.apply` function.
+
+### Int Type
+
+In Scala, the Int type is a **32-bit signed integer**, so in the `def from(n: Int): LazyList[Int]` it will switch from positive to negative values at some point and will repeat itself after about four billion (`2^32`) elements.

@@ -125,3 +125,18 @@ object LazyList:
     if as.isEmpty then empty
     else cons(as.head, apply(as.tail*))
 
+  def continually[A](a: A): LazyList[A] =
+    ???
+
+  /** In Scala, the [[Int]] type is a 32-bit signed integer, so this lazy list
+    * will switch from positive to negative values at some point and will repeat
+    * itself after about four billion elements.
+    */
+  def from(n: Int): LazyList[Int] =
+    ???
+
+  def fibs: LazyList[Int] =
+    ???
+
+  def unfold[A, S](state: S)(f: S => Option[(A, S)]): LazyList[A] =
+    ???
