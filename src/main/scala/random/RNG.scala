@@ -19,13 +19,19 @@ case class SimpleRNG(seed: Long) extends RNG:
     (i.toDouble / Int.MaxValue.toDouble + 1, r)
 
   def intDouble(rng: RNG): ((Int, Double), RNG) =
-    ???
+    val (i, r) = rng.nextInt
+    val (d, r2) = double(r)
+    ((i, d), r2)
 
   def doubleInt(rng: RNG): ((Double, Int), RNG) =
-    ???
+    val ((i, d), r) = intDouble(rng)
+    ((d, i), r)
 
   def double3(rng: RNG): ((Double, Double, Double), RNG) =
-    ???
+    val (d, r) = double(rng)
+    val (d2, r2) = double(r)
+    val (d3, r3) = double(r2)
+    ((d, d2, d3), r3)
 
   def ints(count: Int)(rng: RNG): (List[Int], RNG) =
     ???
