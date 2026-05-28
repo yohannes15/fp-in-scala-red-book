@@ -107,6 +107,39 @@ trait Foo:
   def baz: (Int, Foo)
 ```
 
+## Better API for state actions 
+
+Looking back at our implementations, we’ll notice a common pattern: each of our functions has a type of the form `RNG => (A, RNG)` for some type `A`. Functions of this type are called **state actions** or **state transitions** because they transform RNG states from one to the next. These state actions can be combined in various ways to generate new state actions. It's pretty tedious and repetitive to pass the state along ourselves; we will define functions to pass the state from one action to the next automatically!
+
+Lets make a type alias to simplify our thinking about type of actions. 
+
+```scala
+type Rand[+A] = RNG => (A, RNG)
+// We can now turn methods such as `nextInt` into values of this new type
+val int: Rand[Int] = rng => rng.nextInt
+```
+
+We can think of a value of type `Rand[A]` as a *randomly generated A*, although that's not really accurate. It's really a *state action* - a program that depends on some RNG, uses it to generate an `A`, and transitions the RNG to a new state that can be used by another action later. We want to write functions that let us combine `Rand` state actions, while avoiding passing along the RNG state expliclity.
+
+For example, a simple RNG state transition is the *unit* action, which passes the RNG state without using it, always returning a constant value rather than a random value. 
+
+```scala
+def unit[A](a: A): Rand[A] =
+  rng => (a, rng)
+```
+
+There is also a map for transforming the output of a state action without modifying the resultant state.
+
+```scala
+def map[A, B](s: Rand[A])(f: A => B): Rand[B] = 
+  rng =>
+    val (a, rng2) = s(rng)
+    (f(a), rng2)
+
+// Example of how map is used. here's nonNegativeEven, which reuses nonNegativeInt to generate an Int thats greater than or equal to zero and divisibly by two
+def nonNegativeEven: Rand[Int] = 
+  map(nonNegativeInt)(i => i - (i % 2))
+```
 
 ## Misc Notes
 
