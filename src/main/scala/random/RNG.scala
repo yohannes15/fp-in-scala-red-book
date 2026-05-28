@@ -11,10 +11,12 @@ case class SimpleRNG(seed: Long) extends RNG:
     (n, nextRNG)
 
   def nonNegativeInt(rng: RNG): (Int, RNG) =
-    ???
+    val (i, r) = rng.nextInt
+    (if i < 0 then -(i + 1) else i, r)
 
   def double(rng: RNG): (Double, RNG) =
-    ???
+    val (i, r) = nonNegativeInt(rng)
+    (i.toDouble / Int.MaxValue.toDouble + 1, r)
 
   def intDouble(rng: RNG): ((Int, Double), RNG) =
     ???
@@ -23,4 +25,7 @@ case class SimpleRNG(seed: Long) extends RNG:
     ???
 
   def double3(rng: RNG): ((Double, Double, Double), RNG) =
+    ???
+
+  def ints(count: Int)(rng: RNG): (List[Int], RNG) =
     ???
