@@ -2,7 +2,9 @@
 
 Write a function to generate a list of random integers:
 
+```scala
 def ints(count: Int)(rng: RNG): (List[Int], RNG)
+```
 
 ## Solution
 
