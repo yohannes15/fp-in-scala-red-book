@@ -1,5 +1,7 @@
 package random
 
+import scala.annotation.tailrec
+
 trait RNG:
   def nextInt: (Int, RNG)
 
@@ -34,4 +36,11 @@ case class SimpleRNG(seed: Long) extends RNG:
     ((d, d2, d3), r3)
 
   def ints(count: Int)(rng: RNG): (List[Int], RNG) =
-    ???
+    @tailrec
+    def go(i: Int, r: RNG, acc: List[Int]): (List[Int], RNG) =
+      if i <= 0 then (acc, r)
+      else
+        val (n, nxtR) = r.nextInt
+        go(i - 1, nxtR, n :: acc)
+
+    go(count, rng, Nil)
