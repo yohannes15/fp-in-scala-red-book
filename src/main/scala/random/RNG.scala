@@ -74,5 +74,9 @@ case class SimpleRNG(seed: Long) extends RNG:
   def both[A, B](ra: Rand[A], rb: Rand[B]): Rand[(A, B)] =
     map2(ra, rb)((_, _))
 
+  // same functions as above, but using both
   val randIntDouble: Rand[(Int, Double)] = both(int, double)
   val randDoubleInt: Rand[(Double, Int)] = both(double, int)
+
+  def sequence[A](rs: List[Rand[A]]): Rand[List[A]] =
+    ???
