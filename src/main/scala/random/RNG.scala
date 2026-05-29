@@ -1,8 +1,12 @@
 package random
 
 import scala.annotation.tailrec
+import datastructures.State
 
 type Rand[+A] = RNG => (A, RNG)
+// type Rand[A] = State[RNG, A]
+
+// TODO: PE1 - Convert this module to use the Generic `State`
 
 trait RNG:
   def nextInt: (Int, RNG)

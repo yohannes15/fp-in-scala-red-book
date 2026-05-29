@@ -254,6 +254,26 @@ Here, **State is short for computation that carries some state along, state acti
 case class State[S, +A](run: S => (A, S))
 ```
 
+Or, we can use **opaque types** (scala3 feature).
+
+```scala
+opaque type State[S, +A] = S => (A, S)
+object State: 
+  extension [S, A](underlying: State[S, A])
+    def run(s: S): (A, S) = underlying(s)
+
+  def apply[S, A](f: S => (A, S)): State[S, A] = f
+```
+
+**NOTE:** Outside the defining scope—in a different package, for example—the equivalence of `State[S, A]` and `S => (A, S)` is not known, and hence the need for the extension method and apply. If we had used the case class this is automatically provided by the public val `run` and `apply` is auto derived for case classes. Like the case class version, the opaque type version introduces a distinct type (from the perspective of callers). To see why opaque vs case class, read below section in Misc Notes - Opaque Types.
+
+The representation doesn’t matter too much—any of the approaches are fine. What’s important is that we have a single, general-purpose type, and using this type, we can write general-purpose functions for capturing common patterns of stateful programs.
+
+We can now make `Rand` a type alias for `State`
+
+```scala
+type Rand[A] = State[RNG, A]
+```
 
 ## Misc Notes
 
@@ -265,6 +285,33 @@ A `trait` is an abstract interface that may optionally contain implementations o
 - Abstract & Concrete Members 
 - No Instantiation -> Traits cannot be instantiated on their own
 - Trait Parameters -> Introduced in Scala3
+
+### Opaque types
+
+An [opaque type](https://mng.bz/gRR8) behaves like a type alias inside the defining scope. Outside of the defining scope, the opauqe type is unrelated to the representation type. Opaque type aliases in Scala 3 provide strict type abstraction and type safety with zero runtime overhead. Inside their defining scope, the compiler knows the underlying type; outside, it is completely hidden.
+
+The comparison between opaque types and case classes (specifically in Scala 3) centers on the trade-off between runtime performance and feature richness.
+
+Opaque Types (Winner for Speed): These are known as zero-cost abstractions. At runtime, they do not exist; the compiler replaces them with their underlying primitive type (e.g., Int or String).
+
+- **No Allocation**: Unlike classes, there is no heap allocation for a wrapper object.
+- **No Boxing**: They avoid the "boxing" overhead often seen with `AnyVal` value classes, except in specific generic scenarios.
+- **Fast Operations**: Operations like equality are mapped directly to the underlying type's native implementation.
+
+Case Classes: These are standard objects. Every time you create one, you incur the cost of a heap allocation and a constructor call.
+
+- **Extra object allocation** : In performance-critical loops or big-data scenarios, the memory and CPU overhead of creating millions of small wrapper objects can be significant.
+- **Bulit-in Methods** : Has bulit in methods while for Opaque types, we must use [extension methods](https://mng.bz/5mm7).
+- **Built-in Pattern matching support**: Has unapply
+- **Implementation is fully transparent**
+- **Low boilerplate**
+
+#### When to Use Which
+
+- Use Opaque Types for high-performance domain modeling (e.g., Id, Logarithm, Email) where you want type safety without the "tax" of object wrapping.
+- Use Case Classes for standard data modeling where pattern matching, data extraction, and ease of use are more important than squeezing out every microsecond of performance.
+
+Don’t be afraid of using the simpler case class encoding and only refactoring to opaque types if allocation cost proves to be a bottleneck in your program.
 
 ### Dealing with awkwardness in functional programming
 
