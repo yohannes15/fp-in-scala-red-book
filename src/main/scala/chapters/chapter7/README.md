@@ -154,6 +154,8 @@ def sum(ints: IndexedSeq[Int]): Par[Int] =
     Par.map2(sum(l), sum(r))(_ + _)
 ```
 
+Observe that we’re no longer calling `unit` in the recursive case, and it isn’t clear whether `unit` should accept its argument lazily anymore. In this example, accepting the argument lazily doesn’t seem to provide any benefit, but perhaps this isn’t always the case. Let’s come back to this question later.
+
 ## Misc Notes
 
 ### Problem with using concurrency primitives directly
