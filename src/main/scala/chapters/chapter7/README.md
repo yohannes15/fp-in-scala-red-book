@@ -2,8 +2,6 @@
 
 ## Brief intro to Part 2
 
-In part 1, we covered the fundamentals of FP and saw how the commitment to using only pure functions affects the basic building blocks of programs: loops, data structures, exceptions, and so on.
-
 In part 2, we’ll see how the assumptions of FP we have built in part 1 affect library design. We’ll create three useful libraries in part 2 for:
 
 - parallel and asynchronous computation
