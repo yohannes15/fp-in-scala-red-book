@@ -156,6 +156,61 @@ def sum(ints: IndexedSeq[Int]): Par[Int] =
 
 Observe that we’re no longer calling `unit` in the recursive case, and it isn’t clear whether `unit` should accept its argument lazily anymore. In this example, accepting the argument lazily doesn’t seem to provide any benefit, but perhaps this isn’t always the case. Let’s come back to this question later.
 
+What about `map2`-should it takes its arguments lazily? It would make sense for map2 to run both sides of the computation in parallel, giving each side equal opportunity to run (it would seem arbitrary for the order of the map2 args to matter, since we simply want map2 to indicate that the two computations being combined are independent and can be run in parallel). 
+
+What choice lets us implement this? As a simple test case, consider what happens if `map2` is strict both arguments and we're evaluating `sum(IndexSeq(1,2,3,4))`. 
+
+```scala
+sum(IndexedSeq(1,2,3,4))
+
+map2(sum(IndexedSeq(1,2)), sum(IndexedSeq(3,4)))(_ + _)
+
+map2(
+  map2(
+    sum(IndexedSeq(1)),
+    sum(IndexedSeq(2)))(_ + _),
+    sum(IndexedSeq(3,4)))(_ + _)
+
+map2(
+  map2(
+    unit(1),
+    unit(2))(_ + _),
+  sum(IndexedSeq(3,4)))(_ + _)
+
+map2(
+  map2(
+    unit(1),
+    unit(2))(_ + _),
+  map2(
+    sum(IndexedSeq(3)),
+    sum(IndexedSeq(4)))(_ + _))(_ + _)
+...
+```
+
+Because `map2` is strict and Scala evaluates arguments left to right, whenever we encounter `map2(sum(x), sum(y))(_ + _)`, we must evaluate `sum(x)` and so on recursively. This has the rather unfortunate consequence of requiring us to strictly construct the entire left half of the tree of summations first before moving on to (strictly) constructing the right half. 
+
+Here `sum(IndexedSeq(1,2))` gets fully expanded before we consider `sum(IndexedSeq(3,4))`. And if map2 evaluates its arguments in parallel (using whatever resource is being used to implement the parallelism, like a thread pool), that implies the left half of our computation will start executing before we even begin constructing the right half of our computation.
+
+What if we keep `map2` strict but don’t have it begin execution immediately? Does this help? If map2 doesn’t begin evaluation immediately, this implies a `Par` value is merely constructing a description of what needs to be computed in parallel. Nothing actually occurs until we evaluate this description, perhaps using a `get`-like function. The problem is that if we construct our descriptions strictly, they’ll be rather heavyweight objects. Looking back at our trace, our description will have to contain the full tree of operations to be performed:
+
+```scala
+map2(
+  map2(
+    unit(1),
+    unit(2))(_ + _),
+  map2(
+    unit(3),
+    unit(4))(_ + _))(_ + _)
+```
+
+No matter what data structure we use to store this description, it’ll likely occupy more space than the original itself. It would be nice if our descriptions were more lightweight.
+
+**We should make `map2` lazy and have it begin immediate execution of both sides in parallel. This also addresses the problem of giving neither side priority over the other.**
+
+## Explicit forking
+
+
+
 ## Misc Notes
 
 ### Problem with using concurrency primitives directly
