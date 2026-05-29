@@ -275,6 +275,10 @@ We can now make `Rand` a type alias for `State`
 type Rand[A] = State[RNG, A]
 ```
 
+## Purely functional imperative programming
+
+
+
 ## Misc Notes
 
 ### Trait
@@ -312,6 +316,12 @@ Case Classes: These are standard objects. Every time you create one, you incur t
 - Use Case Classes for standard data modeling where pattern matching, data extraction, and ease of use are more important than squeezing out every microsecond of performance.
 
 Don’t be afraid of using the simpler case class encoding and only refactoring to opaque types if allocation cost proves to be a bottleneck in your program.
+
+### Companion Object methods vs Extension methods
+
+A companion object in Scala 3 is an object with the same name as a class, trait, or enum, defined in the same file. It acts like a place for shared/static functionality and can access private members of its companion class. They’re commonly used for constructors, utilities, and typeclass instances. They organize functionality around a type
+
+Extension methods add new methods to existing types without modifying them or using inheritance. Improve syntax and add behaviour to existing types
 
 ### Dealing with awkwardness in functional programming
 
