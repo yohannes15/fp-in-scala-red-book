@@ -27,4 +27,22 @@ object State:
   def unit[S, A](a: A): State[S, A] = s => (a, s)
 
   def sequence[S, A](states: List[State[S, A]]): State[S, List[A]] =
-    states.foldRight(unit(Nil)) { (s, acc) => s.map2(acc)(_ :: _) }
+    // states.foldRight(unit(Nil)) { (s, acc) => s.map2(acc)(_ :: _) }
+    traverse(states)(s => s)
+
+  def traverse[S, A, B](as: List[A])(f: A => State[S, B]): State[S, List[B]] =
+    as.foldRight(unit(Nil))((a, acc) => f(a).map2(acc)(_ :: _))
+
+  /** simply passes the incoming state along and returns it as the value */
+  def get[S]: State[S, S] = s => (s, s)
+
+  /** resulting action ignores the incoming state, replaces it with the new
+    * state, and returns () instead of a meaningful value
+    */
+  def set[S](s: S): State[S, Unit] = _ => ((), s)
+
+  def modify[S](f: S => S): State[S, Unit] =
+    for
+      s <- get // Gets the current state and assigns it to s
+      _ <- set(f(s)) // Sets the new state to f applied to s
+    yield ()

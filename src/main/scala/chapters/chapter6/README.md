@@ -269,15 +269,68 @@ object State:
 
 The representation doesn’t matter too much—any of the approaches are fine. What’s important is that we have a single, general-purpose type, and using this type, we can write general-purpose functions for capturing common patterns of stateful programs.
 
-We can now make `Rand` a type alias for `State`
+## Purely functional imperative programming
+
+In the imperative programming paradigm, a program is a sequence of statements, where each statement may modify the program state. That’s exactly what we’ve been doing, except our statements are really `State` actions, which are really functions. As functions, they read the current program state simply by receiving it in their argument, and they write to the program state by returning a value.
+
+Consider the following example (which assumes we’ve made `Rand[A]` a type alias for `State[RNG, A])`:
 
 ```scala
 type Rand[A] = State[RNG, A]
 ```
 
-## Purely functional imperative programming
+```scala
+val ns: Rand[List[Int]] =
+  int.flatMap(x =>          //1
+    int.flatMap(y =>
+      ints(x).map(xs =>     //2
+        xs.map(_ % y))))    //3
 
+// 1. int is a value of type Rand[Int] that generates a single random integer.
+// 2. ints(x) generates a list of length x.
+// 3. Replaces every element in the list with its remainder when divided by y
+```
 
+Remember that for-comprehensions are just syntax sugar for a sequence of calls to flatMap followed by a final map.
+
+```scala
+val ns: Rand[List[Int]] =
+  for
+    x <- int              //1
+    y <- int              //2
+    xs <- ints(x)         //3
+  yield xs.map(_ % y)     //4
+
+// 1.Generates an integer x
+// 2. Generates another integer y
+// 3. Generates a list xs of length x
+// 4. Returns the list xs with each element replaced with its remainder when divided by y
+```
+
+This code is much easier to read (and write), and it looks like what it is: an imperative program that maintains some state. But it’s the same code. We get the next Int and assign it to x, get the next Int after that and assign it to y, generate a list of length x, and, finally, return the list with all of its elements modulo y.
+
+To facilitate this kind of imperative programming with for-comprehensions (or flatMaps), **we really only need two primitive `State` constructors**: one for reading the state and one for writing the state. If we imagine that we have a constructor `get` for getting the current state and a constructor `set` for setting a new state, then we could implement a constructor that could modify the state in arbitrary ways.
+
+```scala
+// get action simply passes the incoming state along and returns it as the value
+def get[S]: State[S, S] = s => (s, s)
+
+// resulting action ignores the incoming state, replaces it with the new state, 
+// and returns () instead of a meaningful value
+def set[S](s: S): State[S, Unit] = _ => ((), s)
+
+def modify[S](f: S => S): State[S, Unit] =
+  for
+    s <- get        // Gets the current state and assigns it to s
+    _ <- set(f(s))  // Sets the new state to f applied to s
+  yield ()
+```
+
+This constructor returns a State action that modifies the incoming state by `f`. It yields `Unit` to indicate that it doesn't have a return value other than the state.
+
+These two simple actions along with the State functions we wrote—`unit, map, map2, flatMap`—are all the tools we need to implement any kind of state machine or stateful program in a purely functional way. Instead of mutable data structures and side effects, we use immutable data structures and functions that compute the next state from the previous, and we use State to remove the boilerplate.
+
+The `State` data type **simplifies working with stateful APIs by removing the need to manually thread input and output states throughout computations**. State computations can be built with for-comprehensions, which result in imperative-looking code.
 
 ## Misc Notes
 
@@ -330,3 +383,11 @@ As you write more functional programs, you’ll sometimes encounter situations w
 When you encounter these situations, plow ahead and look for common patterns you can factor out. Most likely, this is a problem others have encountered, and even rediscover the standard solution. Even if you get stuck, struggling to puzzle out a clean solution yourself will help you better understand what solutions others have discovered for dealing with similar problems.
 
 With practice, experience, and more familiarity with the idioms contained in this book, expressing a program functionally will become effortless and natural. Of course, good design is still hard, but programming using pure functions greatly simplifies the design space.
+
+### Aren’t imperative and functional programming opposites?
+
+Imperative and functional programming absolutely aren’t opposites. Remember that functional programming is simply programming without side effects. Imperative programming is about programming with statements that modify some program state, and as we’ve seen, it’s entirely reasonable to maintain state without side effects.
+
+### Constructors in FP
+
+Sometimes the term constructor is used to refer to a function that creates a value of a type. It’s important not to confuse this with the object-oriented notion of a class constructor, which Scala also supports.
