@@ -19,13 +19,11 @@ case class SimpleRNG(seed: Long) extends RNG:
   def nonNegativeInt(rng: RNG): (Int, RNG) =
     val (i, r) = rng.nextInt
     (if i < 0 then -(i + 1) else i, r)
-
   /*
   def double(rng: RNG): (Double, RNG) =
     val (i, r) = nonNegativeInt(rng)
     (i / Int.MaxValue.toDouble + 1, r)
    */
-
   val double: Rand[Double] =
     map(nonNegativeInt)(i => i / Int.MaxValue.toDouble + 1)
 
@@ -83,3 +81,33 @@ case class SimpleRNG(seed: Long) extends RNG:
 
   def intsViaSequence(count: Int): Rand[List[Int]] =
     sequence(List.fill(count)(int))
+
+  def nonNegativeLessThan(n: Int): Rand[Int] =
+    // map(nonNegativeInt)(_ % n) // WRONG ANSWER b/c of skew
+    rng =>
+      val (i, rng2) = nonNegativeInt(rng)
+      val mod = i % n
+      if i + (n - 1) - mod >= 0 then
+        (mod, rng2)
+      // Retry recursively if the Int we got is higher than the
+      // largest multiple of n that fits in a 32-bit Int.
+      else nonNegativeLessThan(n)(rng2)
+
+  def flatMap[A, B](r: Rand[A])(f: A => Rand[B]): Rand[B] =
+    rng0 =>
+      val (a, rng1) = r(rng0)
+      f(a)(rng1)
+
+  def nonNegativeLessThanViaFlatMap(n: Int): Rand[Int] =
+    flatMap(nonNegativeInt) { i =>
+      val mod = i % n
+      if i + (n - 1) - mod >= 0 then unit(mod)
+      else nonNegativeLessThanViaFlatMap(n)
+    }
+
+  def mapViaFlatMap[A, B](r: Rand[A])(f: A => B): Rand[B] =
+    flatMap(r)(a => unit(f(a)))
+
+  def map2FlatMap[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+    // flatMap(ra) { a => flatMap(rb) { b => unit(f(a, b)) } }
+    flatMap(ra)(a => map(rb)(b => f(a, b)))

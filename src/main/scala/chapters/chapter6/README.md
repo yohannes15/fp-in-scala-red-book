@@ -141,6 +141,120 @@ def nonNegativeEven: Rand[Int] =
   map(nonNegativeInt)(i => i - (i % 2))
 ```
 
+Look at `random/RNG.scala` and impl of `map2`, `sequence`, `both` to introduce how to work with stateful actions in a way that is less verbose and error prone.
+
+```scala
+// Some examples
+
+/** if we have an action that generates values of type A and another to generate values
+  * of type B, then we can combine them into one action that generates pairs of both 
+  * A and B
+  */
+def both[A, B](ra: Rand[A], rb: Rand[B]): Rand[(A, B)] =
+  map2(ra, rb)((_, _))
+
+val randIntDouble: Rand[(Int, Double)] = both(int, double)
+val randDoubleInt: Rand[(Double, Int)] = both(double, int)
+
+```
+## Nesting State Actions
+
+There are some functions we can’t write in terms of `map` and `map2`. One such function is `nonNegativeLessThan`, which generates an integer between 0 (inclusive) and `n` (exclusive). Lets look at different attempts in the code blocks below:
+
+```scala
+// This will generate number in the range, but it'll be skewed b/c Int.MaxValue
+// may not be exactly divisble by n. So numbers less than the remainder of that
+// division will come up more frequenty
+def nonNegativeLessThan(n: Int): Rand[Int] = 
+  map(nonNegativeInt)(_ % n)
+
+// When nonNegativeInt generates numbers higher than the largest multiple of n that fits
+// in a 32-bit integer, we should retry the generator and hope to get a smaller number.
+def nonNegativeLessThan(n: Int): Rand[Int] =
+  map(nonNegativeInt): i =>
+    val mod = i % n
+    // Retry recursively if Int > largest multiple of n that fits in a 32-bit Int.
+    if i + (n-1) - mod >= 0 then mod else nonNegativeLessThan(n)(???)
+```
+
+We are moving in the right direction, but `nonNegativeLessThan(n)` has the wrong type. Remember that it should return a `Rand[Int]`, which is a function that expects an RNG. But we don’t have a RNG value to pass to the result of `nonNegativeLessThan(n)` there. What we would like is to **chain things together so the RNG that’s returned by `nonNegativeInt` is passed along to the recursive call to `nonNegativeLessThan`**
+
+We could pass it along explicitly instead of using map, like this:
+
+```scala
+def nonNegativeLessThan(n: Int): Rand[Int] =
+  rng =>
+    val (i, rng2) = nonNegativeInt(rng)
+    val mod = i % n
+    if i + (n-1) - mod >= 0 then
+      (mod, rng2)
+    else nonNegativeLessThan(n)(rng2)
+```
+
+But it would be better to have a function that does this passing along for us—neither map nor map2 will cut it. **We need a more powerful function: flatMap.**
+
+```scala
+def flatMap[A, B](r: Rand[A])(f: A => Rand[B]): Rand[B] =
+  rng0 =>
+    val (a, rng1) = r(rng0)
+    f(a)(rng1)
+
+def mapViaFlatMap[A, B](r: Rand[A])(f: A => B): Rand[B] =
+  flatMap(r)(a => unit(f(a)))
+
+def map2FlatMap[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+  flatMap(ra)(a => map(rb)(b => f(a, b)))
+```
+
+#### Revisiting example from the beginning of this chapter. 
+
+Can we make a more testable die roll using our purely functional API? Here’s an implementation of rollDie using `nonNegativeLessThan`, including the off-by-one error we had before:
+
+```scala
+def rollDie: Rand[Int] = nonNegativeLessThan(6) // 0 to 5 actually. HAS A BUG
+```
+
+If we test this function with various RNG states, we’ll soon find an RNG that causes this function to return 0:
+
+```scala
+val zero = rollDie(SimpleRNG(5))._1 // 0
+```
+
+And we can recreate this reliably by using the same SimpleRNG(5) random generator, without having to worry about its state being destroyed after it’s been used.
+
+Fixing the bug is trivial:
+
+```scala
+def rollDie: Rand[Int] = map(nonNegativeLessThan(6))(_ + 1)
+```
+
+#### Quick note on for-comprehsions
+
+For `map2FlatMap`, **We cannot use a for-comprehension in this case, despite the call sequence being a flatMap followed by a map. Recall that for-comprehensions require the type of the expression on the right-hand side of a binding to define the flatMap and map methods.**
+
+Our definitions of flatMap and map are defined as standalone functions, though, not methods on `Rand[A]` values; notice how we pass the target value as the first parameter to each function. We could address this by defining flatMap and map as extension methods on a `Rand[A]` value, but since `Rand[A]` is a type alias, we’d be defining flatMap and map for all functions of the shape `RNG => (A, RNG)`. We’ll see how to address this better later in this chapter.
+
+## A general state action data type
+
+The functions we’ve just written—`unit, map, map2, flatMap`, and sequence—aren’t specific to random number generation at all. They’re general-purpose functions for working with state actions and don’t care about the type of the state. Note that, for instance, `map` doesn’t care that it’s dealing with RNG state actions, and we can give it a more general signature:
+
+```scala
+def map[S, A, B](action: S => (A, S))(f: A => B): S => (B, S)
+```
+
+Lets use a more general type than `Rand` for handling any type of state
+
+```scala
+type State[S, +A] = S => (A, S)
+```
+
+Here, **State is short for computation that carries some state along, state action, state transition, or even statement**. We might want to write it as its own type instead of using an alias, allowing us to define methods without worrying about conflicting with the methods on the function type. We could do so by simply wrapping the underlying function value like this:
+
+```scala
+case class State[S, +A](run: S => (A, S))
+```
+
+
 ## Misc Notes
 
 ### Trait
