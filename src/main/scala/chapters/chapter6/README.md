@@ -232,7 +232,7 @@ def rollDie: Rand[Int] = map(nonNegativeLessThan(6))(_ + 1)
 
 For `map2FlatMap`, **We cannot use a for-comprehension in this case, despite the call sequence being a flatMap followed by a map. Recall that for-comprehensions require the type of the expression on the right-hand side of a binding to define the flatMap and map methods.**
 
-Our definitions of flatMap and map are defined as standalone functions, though, not methods on `Rand[A]` values; notice how we pass the target value as the first parameter to each function. We could address this by defining flatMap and map as extension methods on a `Rand[A]` value, but since `Rand[A]` is a type alias, we’d be defining flatMap and map for all functions of the shape `RNG => (A, RNG)`. We’ll see how to address this better later in this chapter.
+Our definitions of flatMap and map are defined as standalone functions, though, not methods on `Rand[A]` values; notice how we pass the target value as the first parameter to each function. We could address this by defining flatMap and map as extension methods on a `Rand[A]` value, but since `Rand[A]` is a type alias, we’d be defining flatMap and map for all functions of the shape `RNG => (A, RNG)`. We’ll see how to address this better later in this chapter in datastructues/State.scala. 
 
 ## A general state action data type
 
