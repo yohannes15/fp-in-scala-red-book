@@ -351,3 +351,68 @@ A superclass of random-acess sequences, like Vector. Unlike lists, these sequenc
 ### headOption
 
 A safe, idiomatic method used to retrieve the first element of a collection. It is defined on all collections in Scala. Doesn't throw an excetion like the standard `head` method does on empty collections.
+
+### ExecutorService and Future
+
+`ExecutorService` is a core interface in Java in the `java.util.conucrrent` package that provides a higher-level replacement for using raw threads. It manages a pool of threads to handle asynchronous tasks more efficiently, without the need to manually create or manage individual threads. It handles creation, scheduling, and reuse, significantly improving performance compared to manually managing Thread instances
+
+```java
+import java.util.concurrent.*;
+public class ExecutorExample {
+    public static void main(String[] args) {
+        ExecutorService executorService = Executors.newFixedThreadPool(3);  // Pool of 3 threads// Submit tasks to the executor
+        executorService.submit(() -> System.out.println("Task 1 is running"));
+        executorService.submit(() -> System.out.println("Task 2 is running"));
+        executorService.submit(() -> System.out.println("Task 3 is running"));        
+        executorService.shutdown();  // Shutdown the executor
+    }
+}
+```
+
+In Java/Scala, a `Future` represents the pending result of an asynchronous computation. It serves as a read-only placeholder for a value that is being computed by another thread. When you submit a task to a thread pool via an `ExecutorService`, you immediately receive a `Future` object to track, manage, or retrieve that task's eventual output.
+
+The `Java` Future interface provides five essential methods to manage an asynchronous task:
+
+- `get()`: Blocks the executing thread until the computation completes and then retrieves the result.
+- `get(long timeout, TimeUnit unit)`: Blocks for a specified timeframe to retrieve the result. It throws a `TimeoutException` if the task fails to finish on time.
+- `cancel(boolean mayInterruptIfRunning)`: Attempts to abort task execution. The parameter decides whether to interrupt the thread if the task already started.
+- `isDone()`: Returns true if the task completed, failed, or was canceled.
+- `isCancelled()`: Returns true if the task was successfully aborted before normal completion.
+
+```java
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+public class FutureExample {
+    public static void main(String[] args) {
+        // 1. Create a thread pool
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        // 2. Define a task that returns a result
+        Callable<Integer> task = () -> {
+            TimeUnit.SECONDS.sleep(2); // Simulate long-running work
+            return 42;
+        };
+
+        System.out.println("Submitting task...");
+        // 3. Submit the task to get a Future handle
+        Future<Integer> future = executor.submit(task);
+
+        System.out.println("Doing other work in main thread...");
+
+        try {
+            // 4. Retrieve the result (this blocks until the 2 seconds finish)
+            Integer result = future.get(); 
+            System.out.println("Result received: " + result);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // 5. Always shut down your executor service
+            executor.shutdown();
+        }
+    }
+}
+```
