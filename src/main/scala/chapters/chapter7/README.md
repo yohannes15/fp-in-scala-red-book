@@ -304,6 +304,7 @@ extension [a](pa: Par[A])
 
 ## Refining the API
 
+We should note that `Future` doesn’t have a purely functional interface. This is part of the reason we don’t want users of our library to deal with Future directly. But importantly, even though methods on `Future` rely on side effects, our entire `Par` API remains pure. It’s only after the user calls run and the implementation receives an ExecutorService that we expose the Future machinery. Our users, therefore, program to a pure interface whose implementation nevertheless relies on effects at the end of the day. **But since our API remains pure, these effects aren’t side effects**. In part 4, we’ll discuss this distinction in detail.
 
 ## Misc Notes
 
