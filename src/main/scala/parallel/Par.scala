@@ -61,6 +61,12 @@ object Par:
     def map2Timeouts[B, C](pb: Par[B])(f: (A, B) => C): Par[C] =
       es => Map2Future(pa(es), pb(es), f)
 
+  /** Wraps a by-name value `a` into a `Par` that evaluates it in a separate
+    * thread via `fork(unit(a))`. The computation is submitted to an
+    * `ExecutorService` via `fork`, meaning it runs in a separate thread. Use
+    * `lazyUnit` when you have an expression you want to evaluate in parallel
+    * without blocking the caller. Ideal for async! look at [[asyncF]]
+    */
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
 
   /** This is the simplest and most natural implementation of fork, but there
@@ -79,5 +85,6 @@ object Par:
           def call = a(es).get
       )
 
+  /** convert any A => B to one that evaluates its result asynchronously */
   def asyncF[A, B](f: A => B): A => Par[B] =
-    ???
+    a => lazyUnit(f(a))
