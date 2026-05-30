@@ -44,6 +44,7 @@ object Par:
 
   extension [A](pa: Par[A])
     def run(s: ExecutorService): Future[A] = pa(s)
+    def map[B](f: A => B): Par[B] = pa.map2(unit(()))((a, _) => f(a))
 
     /** map2 doesn’t evaluate the call to f in a separate logical thread, in
       * accord with our design choice of having fork be the sole function in the
@@ -88,3 +89,7 @@ object Par:
   /** convert any A => B to one that evaluates its result asynchronously */
   def asyncF[A, B](f: A => B): A => Par[B] =
     a => lazyUnit(f(a))
+
+object Examples:
+  def sortPar(parList: Par[List[Int]]) =
+    parList.map(_.sorted)

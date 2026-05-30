@@ -306,6 +306,29 @@ extension [a](pa: Par[A])
 
 We should note that `Future` doesn’t have a purely functional interface. This is part of the reason we don’t want users of our library to deal with Future directly. But importantly, even though methods on `Future` rely on side effects, our entire `Par` API remains pure. **It’s only after the user calls `run` and the implementation receives an `ExecutorService` that we expose the Future machinery**. Our users, therefore, program to a pure interface whose implementation nevertheless relies on effects at the end of the day. **But since our API remains pure, these effects aren’t side effects**. In part 4, we’ll discuss this distinction in detail.
 
+What else can we express with our existing combinators? (`map2`, `lazyUnit`, `fork`, `asyncF`, `unit` and `run`). Lets look at another concrete example. 
+
+Suppose we have a `Par[List[Int]]` representing a parallel computation that produces a `List[Int]`, and we'd like to convert this to a `Par[List[Int]]` whose result is sorted:
+
+We could run the Par, sort the resulting list and repackage it in a `Par` with `Unit` -- but we want to avoid calling run. The only other combinator we have that allows ut to manipulat the value of `Par` in a way is `map2`. So if we passed parList to one side of map2, we'd be able to gain access to the `List` inside and sort it, and we can pass whatever we want to the other side of `map2`, so lets just pass a no-op.
+
+```scala
+def sortPar(parList: Par[List[Int]]): Par[List[Int]]
+  parList.map2(unit(()))((a, _) => a.sorted)
+```
+
+We can now tell a `Par[List[Int]]` that we’d like that list sorted, but we might as well generalize this further. We can lift any function of type `A => B` to become a function that takes `Par[A]` and returns `Par[B]`, and we can map any function over a `Par`:
+
+```scala
+extension [A](pa: Par[A]) def map[B](f: A => B): Par[B] =
+  pa.map2(unit(()))((a, _) => f(a))
+
+def sortPar(parList: Par[List[Int]]) =
+  parList.map(_.sorted)
+```
+
+Was it cheating to pass a bogus value, `unit(())`, as an argument to `map2` only to ignore its value? **Not at all!** The fact that we can implement `map` in terms of `map2`, but not the other way around, just shows that `map2` is strictly more powerful than `map`. This sort of thing happens a lot when we’re designing libraries; a function that seems to be primitive often turns out to be expressible using some more powerful primitive.
+
 ## Misc Notes
 
 ### Problem with using concurrency primitives directly
