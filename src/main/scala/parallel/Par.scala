@@ -18,10 +18,31 @@ object Par:
     def get(timeout: Long, unit: TimeUnit): A = get
     def cancel(mayInterruptIfRunning: Boolean): Boolean = false
 
+  private class Map2Future[A, B, C](
+      aFuture: Future[A],
+      bFuture: Future[B],
+      f: (A, B) => C
+  ) extends Future[C]:
+    // Cache needed for isDone. Any future needs to answer "are you done?" honestly
+    @volatile private var cache: Option[C] = None
+
+    def isDone: Boolean = cache.isDefined
+    def get(): C = get(Long.MaxValue, TimeUnit.NANOSECONDS)
+    def get(timeout: Long, unit: TimeUnit): C =
+      val timeoutNs = TimeUnit.NANOSECONDS.convert(timeout, unit)
+      val started = System.nanoTime
+      val a = aFuture.get(timeoutNs, TimeUnit.NANOSECONDS)
+      val elapsed = System.nanoTime - started
+      val b = bFuture.get(timeoutNs - elapsed, TimeUnit.NANOSECONDS)
+      val c = f(a, b)
+      cache = Some(c)
+      c
+
+    def isCancelled: Boolean = aFuture.isCancelled || bFuture.isCancelled
+    def cancel(evenIfRunning: Boolean): Boolean =
+      aFuture.cancel(evenIfRunning) || bFuture.cancel(evenIfRunning)
+
   extension [A](pa: Par[A])
-    /** run is where the parallelism actually gets implemented, everything else
-      * in [[Par]] is a description of parallel computation.
-      */
     def run(s: ExecutorService): Future[A] = pa(s)
 
     /** map2 doesn’t evaluate the call to f in a separate logical thread, in
@@ -35,10 +56,10 @@ object Par:
       * available time allocated for evaluating bf.
       */
     def map2[B, C](pb: Par[B])(f: (A, B) => C): Par[C] =
-      es =>
-        val futureA = pa(es)
-        val futureB = pb(es)
-        UnitFuture(f(futureA.get, futureB.get))
+      es => UnitFuture(f(pa(es).get, pb(es).get))
+
+    def map2Timeouts[B, C](pb: Par[B])(f: (A, B) => C): Par[C] =
+      es => Map2Future(pa(es), pb(es), f)
 
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
 
@@ -57,3 +78,6 @@ object Par:
         new Callable[A]:
           def call = a(es).get
       )
+
+  def asyncF[A, B](f: A => B): A => Par[B] =
+    ???
