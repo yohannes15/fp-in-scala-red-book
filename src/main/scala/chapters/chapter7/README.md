@@ -294,6 +294,16 @@ def lazyUnit[A](a: => A): Par[A] = fork(unit(a))      // 5
 - `lazyUnit`: Wraps its unevaluated argument in a Par and marks it for concurrent evaluation
 - `run`: Extracts a value from a Par by performing the computation
 
+Look at exercise 2 in chapter7/exercises/ex2.md and its solution to see a first initial attempt of reprentation. We come into an initial type conclusion for `Par` as:
+
+```scala
+opaque type Par[A] = ExecutorService => Future[A]
+extension [a](pa: Par[A])
+  def run(s: ExecutorService): Future[A] = pa(s)
+```
+
+## Refining the API
+
 
 ## Misc Notes
 

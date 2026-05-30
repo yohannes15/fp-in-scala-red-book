@@ -7,11 +7,9 @@ opaque type Par[A] = ExecutorService => Future[A]
 object Par:
   extension [A](pa: Par[A])
     /** run is where the parallelism actually gets implemented, everything else
-      * in [[Par]] is a description of the parallel computation.
+      * in [[Par]] is a description of parallel computation.
       */
-    def run: A =
-      ???
-
+    def run(s: ExecutorService): Future[A] = pa(s)
     def map2[B, C](pb: Par[B], f: (A, B) => C): Par[C] =
       ???
 
