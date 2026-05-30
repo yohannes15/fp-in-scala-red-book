@@ -205,10 +205,94 @@ map2(
 
 No matter what data structure we use to store this description, it’ll likely occupy more space than the original itself. It would be nice if our descriptions were more lightweight.
 
-**We should make `map2` lazy and have it begin immediate execution of both sides in parallel. This also addresses the problem of giving neither side priority over the other.**
+We should make `map2` lazy and have it begin immediate execution of both sides in parallel. This also addresses the problem of giving neither side priority over the other.
 
 ## Explicit forking
 
+Something still doesn't feel right. Is it *always* the case that we want to evaluate the two arguments to `map2` in parallel? Probably not. Consider the following example
+
+```scala
+Par.map2(Par.unit(1), Par.unit(1))(_ + _)
+```
+
+In this case, there isn't much point in spawning off a separate logical thread to evaluate them, but our API doesn't give us any way of providing this sort of info. Our current API is very inexplict about when computations get forked off the main thread; the programmer doesn't get to specify where this forking should occur. 
+
+What if we make the forking more explicit? We can do that by inventing another function `fork`:
+
+```scala
+// means that the given Par should be run in a separate logical thread
+def fork[A](a: => Par[A]): Par[A]
+
+def sum(ints: IndexedSeq[A]): Par[Int] = 
+  if ints.size <= 1 then
+    Par.unit(ints.headOption.getOrElse(0))
+  else
+    val (l, r) = ints.splitAt(ints / 2)
+    Par.map2(Par.fork(sum(l)), Par.fork(sum(r)))(_ + _)
+```
+
+**With `fork` we can now make `map2` strict, leaving it up to the programmer to wrap arguments if they wish**. A function like `fork` solves the problem of instantiating our parallel computations too strictly, but more fundamentally, it puts the parallelism explicitly under programmer control. We're addressing two concerns here:
+
+1. We need some way to indicate that the results of the two parallel tasks should be combined
+2. We have the choice of whether a particular task should be performed asynchronously.
+
+By keeping these concerns separate, we avoid having any sort of global policy for parallelism attached to `map2` and other operations we write.
+
+Lets now return to the question of whether `unit` should be strict or lazy. With `fork` we can now make `unit` strict without any loss of expressiveness. A nonstrict version of it—let’s call it lazyUnit—can be implemented using `unit` and `fork`. Thats the power of composition. `lazyUnit` is a simple example of a derived combinator, as opposed to a primitive combnator, like `Unit`.
+
+We were able to define `lazyUnit` in terms of other operations; later, when we pick a representation for Par, `lazyUnit` won’t need to know anything about this representation—its only knowledge of `Par` will come from the operations `fork` and `unit` that are defined on Par
+
+```scala
+def unit[A](a: A): Par[A]
+def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
+```
+
+We know we want `fork` to **signal that its argument gets evaluated in a separate logical thread**, but we still have the question of whether it should begin doing so immediately upon being called or hold on to its argument to be evaluated in a logical thread later when the computation is forced, using something like `get`. Should evaluation be eager or lazy?
+
+#### Should evaluation be the responsiblity of fork or get?
+
+If `fork` begins evaluating its argument immediately in parallel:
+
+- the implementation must clearly know something, either directly or indirectly, about how to create threads or submit tasks to some sort of thread pool. 
+- implies that the thread pool (or whatever resource we use to implement the parallelism) must be (globally) accessible and properly initialized wherever we want to call `fork`. (This is much like how the credit card processing system was accessible to the buyCoffee method in our Cafe example in chapter 1.)
+- This means we lose the ability to control the parallelism strategy used for different parts of our program.
+
+While there is nothing inherently wrong with having a global resource for executing parallel tasks, we can imagine how it would be useful to have more fine-grained control over what implementations are used where (we might want each subsystem of a large app to get its own thread pool with different parameters for example). **It seems much more appropriate to give `get` the responsibility of creating threads and submitting executing tasks.** 
+
+Note that coming to these conclusions didn’t require knowing exactly how fork and get will be implemented or even what the representation of `Par` will be. We just reasoned informally about the sort of information required to actually spawn a parallel task and examined the consequences of having `Par` values know this information.
+
+If `fork` holds onto its unevaluated argument until later:
+
+- It requires no access to the mechanism for implementing parallelism; it just takes an unevaluated `Par` and **marks it for concurrent evaluation**.
+
+Lets assume fork is lazy. With this model, `Par` itself doesn't need to know how to actually implement the parallelism. It's more a description of a parallel computation that gets interpreted at a later time by something like the `get` function. This is a shift from before, where we were considering Par to be a container of a value that we could simply get when it becomes available. Now its more of a first-class program we can run. So lets rename our `get` function to `run` and dictate that this where the parallelism actually gets implemented.
+
+Because **`Par` is now just a pure data structure, `run` needs to have some means of implementing the parallelism**, whether it spawns new threads, delegates tasks to a thread pool, or uses some other mechanism.
+
+```scala
+extension [A](pa: Par[A]):
+  def run: A
+```
+
+## Picking a representation
+
+We've sketched out the follwing api
+
+```scala
+def unit[A](a: A): Par[A]                             // 1
+extension [A](pa: Par[A])
+  def map2[B, C](pb: Par[B])(f: (A, B) => C): Par[C]  // 2
+  def run: A                                          // 3
+def fork[A](a: => Par[A]): Par[A]                     // 4
+def lazyUnit[A](a: => A): Par[A] = fork(unit(a))      // 5
+```
+
+
+- `unit`: Promotes a constant value to a parallel computation
+- `map2`: Combines the results of two parallel computations with a binary function
+- `fork`: Marks a computation for concurrent evaluation—the evaluation won’t occur until forced by run.
+- `lazyUnit`: Wraps its unevaluated argument in a Par and marks it for concurrent evaluation
+- `run`: Extracts a value from a Par by performing the computation
 
 
 ## Misc Notes
