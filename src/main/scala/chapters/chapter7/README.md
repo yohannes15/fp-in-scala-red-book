@@ -347,7 +347,34 @@ def parMap[A,B](ps: List[A])(f: A => B): Par[List[B]] =
 Remember that `asyncF` converts an `A => B` to an `A => Par[B]` by *forking a parallel computation* to produce the result. So we can fork off our N parallel computations pretty easily, but we need some way of collecting their results. Are we stuck? Well, just from inspecting the types, we can see that we need some way of converting our `List[Par[B]]` to the `Par[List[B]]` required by the return type of `parMap`. We need a `sequence` function then we can complete our impl of `parMap` 
 
 ```scala
-def sequence[A](ps: List[Par[A]]): Par[List[A]]
+def sequence[A](ps: List[Par[A]]): Par[List[A]] =
+  ps.foldRight(unit(Nil)) {
+    case (parA, parList) => parA.map2(parList)((a, la) => a :: la)
+  }
+
+def parMap[A, B](ps: List[A])(f: A => B): Par[List[B]] =
+  fork {
+    val fbs: List[Par[B]] = ps.map(asyncF(f))
+    sequence(fbs)
+  }
+```
+
+With this implementation, `parMap` will return immediately, even for a huge input list. When we later call `run`, it will `fork` a single asynchronous computation, which itself spawns N parallel computations and then waits for these computations to finish, collecting their results into a list. If, instead, we left out the call to `fork`, calling parMap would first create the `fbs` list before calling `sequence`, resulting in performing some of the computation on the calling thread.
+
+Another example: 
+
+```scala
+def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] =
+  fork:                                                     // 1
+    val pars: List[Par[List[A]]] =
+      as.map(asyncF(a => if f(a) then List(a) else Nil))    // 2
+    sequence(pars).map(_.flatten)                           // 3
+
+// 1. Like in parMap, we fork immediately, so the mapping over the original list is done on a separate 
+//    logical thread rather than the caller’s thread.
+
+// 2. We use asyncF to convert our A => List[A] function to an A => Par[List[A]] function.
+// 3. sequence(pars) returns a `Par[List[List[A]]]`, so we map over that and flatten the inner nested lists.
 ```
 
 ## Misc Notes

@@ -86,16 +86,34 @@ object Par:
           def call = a(es).get
       )
 
-  def sequence[A](ps: List[Par[A]]): Par[List[A]] =
-    ???
-
-  def parMap[A, B](ps: List[A])(f: A => B): Par[List[B]] =
-    val fbs: List[Par[B]] = ps.map(asyncF(f))
-    ???
-
   /** convert any A => B to one that evaluates its result asynchronously */
   def asyncF[A, B](f: A => B): A => Par[B] =
     a => lazyUnit(f(a))
+
+  def sequence[A](ps: List[Par[A]]): Par[List[A]] =
+    sequenceBalanced(ps.toIndexedSeq).map(_.toList)
+    // ps.foldRight(unit(Nil)) { case (pa, acc) => pa.map2(acc)(_ :: _) }
+
+  def sequenceBalanced[A](pas: IndexedSeq[Par[A]]): Par[IndexedSeq[A]] =
+    if pas.isEmpty then
+      unit(IndexedSeq.empty)
+    else if pas.size == 1 then
+      pas.head.map(a => IndexedSeq(a))
+    else
+      val (l, r) = pas.splitAt(pas.size / 2)
+      sequenceBalanced(l).map2(sequenceBalanced(r))(_ ++ _)
+
+  def parMap[A, B](as: List[A])(f: A => B): Par[List[B]] =
+    fork {
+      val fbs: List[Par[B]] = as.map(asyncF(f))
+      sequence(fbs)
+    }
+
+  def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] =
+    fork {
+      val pars = as.map(asyncF(a => if f(a) then List(a) else Nil))
+      sequence(pars).map(_.flatten)
+    }
 
 object Examples:
   def sortPar(parList: Par[List[Int]]) =
