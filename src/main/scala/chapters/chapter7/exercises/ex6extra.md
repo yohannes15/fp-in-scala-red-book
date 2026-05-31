@@ -15,4 +15,5 @@ Here are some ideas to try:
 Look at parallel/Par.scala.
 
 - Yes there is, we can right a `parFold` and implement `max` using `parFold(ints)(MinValue)(_ max _)`
-- 
+- Implemented using `ParMap` to map over and convert each String into a Int and then to combine those Ints for a total sum. From this we realized we can invent `parFoldMap`, which encapsulates, the logic of mapping over, tranforming each element and then combining them. Using this we can implement `parFold` as well (which skips the transformation)
+- Implemented `map3` using currying on the first map2 between pa and pb to produce a `Par[C => D]` and then used than on map2 between the combination and pc to return pd
