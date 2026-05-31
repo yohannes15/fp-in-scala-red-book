@@ -63,43 +63,10 @@ object Par:
       es => Map2Future(pa(es), pb(es), f)
 
     def map3[B, C, D](pb: Par[B], pc: Par[C])(f: (A, B, C) => D): Par[D] =
-      ???
-
-    def map3Timouts[B, C, D](
-        pb: Par[B],
-        pc: Par[C]
-    )(f: (A, B, C) => D): Par[D] =
-      ???
-
-    def map4[B, C, D, E](
-        pb: Par[B],
-        pc: Par[C],
-        pd: Par[D]
-    )(f: (A, B, C, D) => E): Par[E] =
-      ???
-
-    def map4Timeouts[B, C, D, E](
-        pb: Par[B],
-        pc: Par[C],
-        pd: Par[D]
-    )(f: (A, B, C, D) => E): Par[E] =
-      ???
-
-    def map5[B, C, D, E, F](
-        pb: Par[B],
-        pc: Par[C],
-        pd: Par[D],
-        pe: Par[E]
-    )(f: (A, B, C, D, E) => F): Par[F] =
-      ???
-
-    def map5Timeouts[B, C, D, E, F](
-        pb: Par[B],
-        pc: Par[C],
-        pd: Par[D],
-        pe: Par[E]
-    )(f: (A, B, C, D, E) => F): Par[F] =
-      ???
+      val combined: Par[C => D] = pa.map2(pb) {
+        (a, b) => (c: C) => f(a, b, c)
+      }
+      combined.map2(pc)((g, c) => g(c))
 
   /** Wraps a by-name value `a` into a `Par` that evaluates it in a separate
     * thread via `fork(unit(a))`. The computation is submitted to an
@@ -155,19 +122,25 @@ object Par:
     }
 
   def parFold[A](ints: IndexedSeq[A])(z: A)(f: (A, A) => A): Par[A] =
-    if ints.isEmpty then Par.unit(z)
-    else if ints.size == 1 then Par.unit(f(z, ints.head))
+    parFoldMap(ints)(z)(identity[A])(f)
+
+  /** generalizing the map-then-combine pattern */
+  def parFoldMap[A, B](as: IndexedSeq[A])(z: B)(
+      f: A => B
+  )(g: (B, B) => B): Par[B] =
+    if as.isEmpty then Par.unit(z)
+    else if as.size == 1 then Par.unit(f(as.head))
     else
-      val (l, r) = ints.splitAt(ints.size / 2)
-      val parL = Par.fork(parFold(l)(z)(f))
-      val parR = Par.fork(parFold(r)(z)(f))
-      parL.map2(parR)(f)
+      val (l, r) = as.splitAt(as.size / 2)
+      val parL = Par.fork(parFoldMap(l)(z)(f)(g))
+      val parR = Par.fork(parFoldMap(r)(z)(f)(g))
+      parL.map2(parR)(g)
 
   def max(ints: IndexedSeq[Int]): Par[Int] =
     parFold(ints)(Int.MinValue)(_ max _)
 
   def sum(ints: IndexedSeq[Int]): Par[Int] =
-    Par.parFold(ints)(0)(_ + _)
+    parFold(ints)(0)(_ + _)
 
 object Examples:
   def sum(ints: IndexedSeq[Int]): Par[Int] =
@@ -183,4 +156,5 @@ object Examples:
     parList.map(_.sorted)
 
   def totalNumberOfWords(paragraphs: List[String]): Par[Int] =
-    ???
+    // Par.parMap(paragraphs)(p => p.split("\\s+").size).map(_.sum)
+    Par.parFoldMap(paragraphs.toIndexedSeq)(0)(_.split("\\s+").size)(_ + _)
