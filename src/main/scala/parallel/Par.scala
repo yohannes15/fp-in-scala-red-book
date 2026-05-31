@@ -62,6 +62,45 @@ object Par:
     def map2Timeouts[B, C](pb: Par[B])(f: (A, B) => C): Par[C] =
       es => Map2Future(pa(es), pb(es), f)
 
+    def map3[B, C, D](pb: Par[B], pc: Par[C])(f: (A, B, C) => D): Par[D] =
+      ???
+
+    def map3Timouts[B, C, D](
+        pb: Par[B],
+        pc: Par[C]
+    )(f: (A, B, C) => D): Par[D] =
+      ???
+
+    def map4[B, C, D, E](
+        pb: Par[B],
+        pc: Par[C],
+        pd: Par[D]
+    )(f: (A, B, C, D) => E): Par[E] =
+      ???
+
+    def map4Timeouts[B, C, D, E](
+        pb: Par[B],
+        pc: Par[C],
+        pd: Par[D]
+    )(f: (A, B, C, D) => E): Par[E] =
+      ???
+
+    def map5[B, C, D, E, F](
+        pb: Par[B],
+        pc: Par[C],
+        pd: Par[D],
+        pe: Par[E]
+    )(f: (A, B, C, D, E) => F): Par[F] =
+      ???
+
+    def map5Timeouts[B, C, D, E, F](
+        pb: Par[B],
+        pc: Par[C],
+        pd: Par[D],
+        pe: Par[E]
+    )(f: (A, B, C, D, E) => F): Par[F] =
+      ???
+
   /** Wraps a by-name value `a` into a `Par` that evaluates it in a separate
     * thread via `fork(unit(a))`. The computation is submitted to an
     * `ExecutorService` via `fork`, meaning it runs in a separate thread. Use
@@ -124,11 +163,13 @@ object Par:
       val parR = Par.fork(parFold(r)(z)(f))
       parL.map2(parR)(f)
 
-  def parMax(ints: IndexedSeq[Int]): Par[Int] =
+  def max(ints: IndexedSeq[Int]): Par[Int] =
     parFold(ints)(Int.MinValue)(_ max _)
 
-object Examples:
+  def sum(ints: IndexedSeq[Int]): Par[Int] =
+    Par.parFold(ints)(0)(_ + _)
 
+object Examples:
   def sum(ints: IndexedSeq[Int]): Par[Int] =
     if ints.size <= 1 then
       Par.unit(ints.headOption.getOrElse(0))
@@ -140,3 +181,6 @@ object Examples:
 
   def sortPar(parList: Par[List[Int]]) =
     parList.map(_.sorted)
+
+  def totalNumberOfWords(paragraphs: List[String]): Par[Int] =
+    ???
