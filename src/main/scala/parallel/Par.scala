@@ -116,5 +116,15 @@ object Par:
     }
 
 object Examples:
+
+  def sum(ints: IndexedSeq[Int]): Par[Int] =
+    if ints.size <= 1 then
+      Par.unit(ints.headOption.getOrElse(0))
+    else
+      val (l, r) = ints.splitAt(ints.size / 2)
+      val parL = Par.fork(sum(l))
+      val parR = Par.fork(sum(r))
+      parL.map2(parR)(_ + _)
+
   def sortPar(parList: Par[List[Int]]) =
     parList.map(_.sorted)
