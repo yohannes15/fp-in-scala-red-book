@@ -327,7 +327,28 @@ def sortPar(parList: Par[List[Int]]) =
   parList.map(_.sorted)
 ```
 
-Was it cheating to pass a bogus value, `unit(())`, as an argument to `map2` only to ignore its value? **Not at all!** The fact that we can implement `map` in terms of `map2`, but not the other way around, just shows that `map2` is strictly more powerful than `map`. This sort of thing happens a lot when we’re designing libraries; a function that seems to be primitive often turns out to be expressible using some more powerful primitive.
+What else can we implement using our API? Could we map over a list in parallel? Unlike `map2`, which combines two parallel computations, `parMap` needs to combine N parallel computations. It seems like this should somehow be expressable:
+
+```scala
+def parMap[A, B](ps: List[A])(f: A => B): Par[List[B]]
+```
+
+We could just write `parMap` as a new primitive instead. Remember `Par[A]` is simply an alias for `ExecutorService => Future[A]`. There is nothing wrong with implementing operations as new primitives. In some cases, we can even implement the operations more efficiently by assuming something about the underlying representation of the data types we're working with. 
+
+But right now, we are just interested in exploring what operations are expressible using our existing API and grasping the r/n b/n the various operations we've defined. **Understanding what combinators are truly primitive will become more important** in part3 when we show how to abstract over common patterns across libraries.
+
+In this case, there’s another good reason *not to implement `parMap` as a new primitive*: it’s challenging to do so correctly, particularly if we want to properly respect timeouts. It’s frequently the case that primitive combinators encapsulate some rather tricky logic, and reusing them means we don’t have to duplicate this logic.
+
+```scala
+def parMap[A,B](ps: List[A])(f: A => B): Par[List[B]] =
+  val fbs: List[Par[B]] = ps.map(asyncF(f))
+```
+
+Remember that `asyncF` converts an `A => B` to an `A => Par[B]` by *forking a parallel computation* to produce the result. So we can fork off our N parallel computations pretty easily, but we need some way of collecting their results. Are we stuck? Well, just from inspecting the types, we can see that we need some way of converting our `List[Par[B]]` to the `Par[List[B]]` required by the return type of `parMap`. We need a `sequence` function then we can complete our impl of `parMap` 
+
+```scala
+def sequence[A](ps: List[Par[A]]): Par[List[A]]
+```
 
 ## Misc Notes
 

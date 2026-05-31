@@ -86,6 +86,13 @@ object Par:
           def call = a(es).get
       )
 
+  def sequence[A](ps: List[Par[A]]): Par[List[A]] =
+    ???
+
+  def parMap[A, B](ps: List[A])(f: A => B): Par[List[B]] =
+    val fbs: List[Par[B]] = ps.map(asyncF(f))
+    ???
+
   /** convert any A => B to one that evaluates its result asynchronously */
   def asyncF[A, B](f: A => B): A => Par[B] =
     a => lazyUnit(f(a))
