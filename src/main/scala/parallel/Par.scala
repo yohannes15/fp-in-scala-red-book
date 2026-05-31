@@ -115,6 +115,18 @@ object Par:
       sequence(pars).map(_.flatten)
     }
 
+  def parFold[A](ints: IndexedSeq[A])(z: A)(f: (A, A) => A): Par[A] =
+    if ints.isEmpty then Par.unit(z)
+    else if ints.size == 1 then Par.unit(f(z, ints.head))
+    else
+      val (l, r) = ints.splitAt(ints.size / 2)
+      val parL = Par.fork(parFold(l)(z)(f))
+      val parR = Par.fork(parFold(r)(z)(f))
+      parL.map2(parR)(f)
+
+  def parMax(ints: IndexedSeq[Int]): Par[Int] =
+    parFold(ints)(Int.MinValue)(_ max _)
+
 object Examples:
 
   def sum(ints: IndexedSeq[Int]): Par[Int] =

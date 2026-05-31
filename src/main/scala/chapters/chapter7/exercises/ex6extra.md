@@ -1,3 +1,5 @@
+## Exercise 7.6 Extra
+
 Think of any other useful functions to write? Experiment with writing a few parallel computations of your own to see which ones can be expressed without additional primitives. 
 
 Here are some ideas to try:
@@ -7,3 +9,10 @@ Here are some ideas to try:
 - Write a function that takes a list of paragraphs (a `List[String]`) and returns the total number of words across all paragraphs in parallel. Look for ways to generalize this function.
 
 - Implement `map3`, `map4`, and `map5` in terms of map2.
+
+## Solutions
+
+Look at parallel/Par.scala.
+
+- Yes there is, we can right a `parFold` and implement `max` using `parFold(ints)(MinValue)(_ max _)`
+- 
