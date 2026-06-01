@@ -384,6 +384,7 @@ We can get far just by writing down the type signature for an operation we want 
 **We’re treating the API as an algebra or an abstract set of operations, along with a set of laws or properties we assume to be true, and simply doing formal symbol manipulation following the rules specified by this algebra.**
 
 Up until now, we’ve been reasoning somewhat informally about our API. Let's take a step back and formalize what laws we expect to hold (or would like to hold) for your API. Actually writing these down and making them precise can highlight design choices that wouldn’t be otherwise apparent when reasoning informally. **Like any design choice, choosing laws has consequences; it places constraints on what the operations can mean, determines what implementation choices are possible, and affects what other properties can be true.**
+
 ### The Law of Mapping
 
 Lets look at an example in which we'll make up a possible law that seems reasonable.
@@ -426,6 +427,20 @@ Our new, simpler law talks only about `map`; apparently, the mention of unit was
 Even more interestingly, given `y.map(id) == y`, we can perform the substitutions in the other direction to get back our original, more complex law. Logically, we have the freedom to do so because map **can’t** behave differently for different function types it receives. Thus, given `y.map(id) == y`, it **must be true** that `unit(x).map(f) == unit(f(x))`. Since we get this second law or theorem for free, simply because of the parametricity of map, it’s sometimes called a *[free theorem](https://home.ttic.edu/~dreyer/course/papers/wadler.pdf)*. 
 
 In our `Par` example, we can say that, **map is required to be structure-preserving in that it doesn’t alter the structure of the parallel computation, only the value inside the computation.**
+
+### The Law of Forking
+
+Let’s consider a stronger property: **fork should not affect the result of a parallel computation**
+
+```scala
+fork(x) == x
+```
+
+`fork(x)` should do the same thing as `x` but async - in a logical thread separate from the main thread. Surprisingly this simple property places strong constraints on our implementation of `fork`. 
+
+#### Breaking the law: A subtle bug
+
+We're expecting `fork(x) == x` for all choices of `x` and any choice of `ExecutorService`. We know `x` is some expression making use of fork, unit, map2 and other combinators derived from these. What about `ExecutorService`? What are some possible impl of it? Theres a good listing of different implementations in the class `java.util.concurrent.Executors`. [See More](http://mng.bz/urQd)
 
 ## Misc Notes
 
