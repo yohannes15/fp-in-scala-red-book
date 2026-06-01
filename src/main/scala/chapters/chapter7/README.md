@@ -377,6 +377,56 @@ def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] =
 // 3. sequence(pars) returns a `Par[List[List[A]]]`, so we map over that and flatten the inner nested lists.
 ```
 
+## Algebra of an API
+
+We can get far just by writing down the type signature for an operation we want and then following the types to an implementation. This isn’t cheating; it’s a natural style of reasoning, analogous to the reasoning one does when simplifying an *algebraic equation*. 
+
+**We’re treating the API as an algebra or an abstract set of operations, along with a set of laws or properties we assume to be true, and simply doing formal symbol manipulation following the rules specified by this algebra.**
+
+Up until now, we’ve been reasoning somewhat informally about our API. Let's take a step back and formalize what laws we expect to hold (or would like to hold) for your API. Actually writing these down and making them precise can highlight design choices that wouldn’t be otherwise apparent when reasoning informally. **Like any design choice, choosing laws has consequences; it places constraints on what the operations can mean, determines what implementation choices are possible, and affects what other properties can be true.**
+### The Law of Mapping
+
+Lets look at an example in which we'll make up a possible law that seems reasonable.
+
+```scala
+unit(1).map(_ + 1) = unit(2) // these are equivalent!
+```
+
+In what sense are they equivalent? This is an interesting question. For now, let’s say **two `Par` objects are equivalent if for any valid `ExecutorService` argument, their `Future` results have the same value.**
+
+```scala
+def equal[A](e: ExecutorService)(p: Par[A], p2: Par[A]): Boolean =
+  p(e).get == p2(e).get
+```
+
+Laws and functions share much in common. Just as we can generalize functions, **we can generalize laws**. For instance, the preceding could be generalized this way:
+
+```scala
+unit(x).map(f) == unit(f(x))
+```
+
+Here we’re saying that this equality should hold for **any choice of `x` and `f`, not just `1` and the `_ + 1` function.** This equality places some constraints on implementations. Examples:
+
+- `unit` can’t, say, inspect the value it receives and decide to return a parallel computation with a result of 42 when the input is 1—**it can only pass along whatever it receives.**
+- `ExecutorService`, when we submit `Callable` objects to it for execution, it can’t make any assumptions or change behavior based on the values it receives. 
+
+**This law disallows downcasting or isInstanceOf checks (often grouped under the term typecasing) in the implementations of `map` and `unit`.**
+
+Much like we strive to define functions in terms of simpler functions, each of which do just one thing, we can define laws in terms of simpler laws that each say just one thing. Let's see if we can simplify this law further. We said we wanted this law to hold for any choice of `x` and `f`. Something interesting happens if we substitute the `identity` function for `f`. 
+
+```scala
+unit(x).map(f) = unit(f(x))   // initial law
+unit(x).map(id) = unit(id(x)) // Sub the identity fn for f
+unit(x).map(id) = unit(x)     // simplify
+y.map(id) = y                 // Sub y for unit(x)
+```
+
+Our new, simpler law talks only about `map`; apparently, the mention of unit was an extraneous detail. To get some insight on this new law, lets think about what `map` can't do. It can't throw an exception and crash the computation before applying the function to the result. **All it can do is apply the function `f` to the result of `y`**, which of course, leaves `y` unaffected when that function is `id`.
+
+Even more interestingly, given `y.map(id) == y`, we can perform the substitutions in the other direction to get back our original, more complex law. Logically, we have the freedom to do so because map **can’t** behave differently for different function types it receives. Thus, given `y.map(id) == y`, it **must be true** that `unit(x).map(f) == unit(f(x))`. Since we get this second law or theorem for free, simply because of the parametricity of map, it’s sometimes called a *[free theorem](https://home.ttic.edu/~dreyer/course/papers/wadler.pdf)*. 
+
+In our `Par` example, we can say that, **map is required to be structure-preserving in that it doesn’t alter the structure of the parallel computation, only the value inside the computation.**
+
 ## Misc Notes
 
 ### Problem with using concurrency primitives directly
@@ -493,4 +543,6 @@ public class FutureExample {
 
 The `@volatile` annotation in Scala ensures that changes to a variable are immediately visible to other threads. When applied to a mutable field (var), it prevents threads from caching the value locally, forcing them to always read and write directly to the main memory. It must be applied to a `var`. Applying it an immutable `val` serves no purpose and will result in compiler warning.
 
+### `algebra`
 
+We do mean `algebra` in the mathematical sense of one or more sets, together with a collection of functions operating on objects of these sets, and a set of axioms. **Axioms are statements assumed to be true from which we can derive other theorems that must also be true**. In our case, the sets are particular types like `Par[A]` and `List[Par[A]]`, and the functions are operations like `map2`, `unit`, and `sequence`.

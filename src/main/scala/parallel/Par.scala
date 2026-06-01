@@ -8,40 +8,6 @@ object Par:
   /** unit is represented as a function that returns a UnitFuture */
   def unit[A](a: A): Par[A] = es => UnitFuture(a)
 
-  /** simple implementation of Future that just wraps a constant value. It
-    * doesn’t use the ExecutorService at all; it’s always done and can’t be
-    * cancelled. Its get method simply returns the value we gave it.
-    */
-  private case class UnitFuture[A](get: A) extends Future[A]:
-    def isDone = true
-    def isCancelled = false
-    def get(timeout: Long, unit: TimeUnit): A = get
-    def cancel(mayInterruptIfRunning: Boolean): Boolean = false
-
-  private class Map2Future[A, B, C](
-      aFuture: Future[A],
-      bFuture: Future[B],
-      f: (A, B) => C
-  ) extends Future[C]:
-    // Cache needed for isDone. Any future needs to answer "are you done?" honestly
-    @volatile private var cache: Option[C] = None
-
-    def isDone: Boolean = cache.isDefined
-    def get(): C = get(Long.MaxValue, TimeUnit.NANOSECONDS)
-    def get(timeout: Long, unit: TimeUnit): C =
-      val timeoutNs = TimeUnit.NANOSECONDS.convert(timeout, unit)
-      val started = System.nanoTime
-      val a = aFuture.get(timeoutNs, TimeUnit.NANOSECONDS)
-      val elapsed = System.nanoTime - started
-      val b = bFuture.get(timeoutNs - elapsed, TimeUnit.NANOSECONDS)
-      val c = f(a, b)
-      cache = Some(c)
-      c
-
-    def isCancelled: Boolean = aFuture.isCancelled || bFuture.isCancelled
-    def cancel(evenIfRunning: Boolean): Boolean =
-      aFuture.cancel(evenIfRunning) || bFuture.cancel(evenIfRunning)
-
   extension [A](pa: Par[A])
     def run(s: ExecutorService): Future[A] = pa(s)
     def map[B](f: A => B): Par[B] = pa.map2(unit(()))((a, _) => f(a))
@@ -124,7 +90,7 @@ object Par:
   def parFold[A](ints: IndexedSeq[A])(z: A)(f: (A, A) => A): Par[A] =
     parFoldMap(ints)(z)(identity[A])(f)
 
-  /** generalizing the map-then-combine pattern */
+  /** generalizing the map-transform-combine pattern */
   def parFoldMap[A, B](as: IndexedSeq[A])(z: B)(
       f: A => B
   )(g: (B, B) => B): Par[B] =
