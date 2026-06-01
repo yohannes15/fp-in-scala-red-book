@@ -528,7 +528,43 @@ With this encoding, when we apply an `ExecutorService` to the function represent
 
 The `Future` type we defined here is rather imperative, an `A => Unit`. Such a function can only be useful for executing some side effect using the given `A`, as we certainly aren't using the returned result. Is this still FP? **YES**, because the side effects we use are not observable to code that uses `Par`. Future is **opaque** and the function representation can't be called by outside code. The notion of **using local effects for a pure API** is a common thing. This notion of local effects, observability and subtleties of purity and referential transparency are discussed in greater detail in chapter 14.
 
-With this representation of `Par`, lets look at how we might implement the `run` function first, which we'll change to just return an `A`. Since it goes from `Par[A]` to `A`, it will have to construct a continuation and pass it to the `Future`.
+With this representation of `Par`, lets look at how we might implement the `run` function first, which we'll change to just return an `A`. Since it goes from `Par[A]` to `A`, it will have to construct a continuation and pass it to the `Future`. Look down in Misc Notes for notes about AtomicReference and CountDownLatch.
+
+```scala
+extension [A](pa: Par[A]) def run(es: ExecutorService): A =
+  val ref = new AtomicReference[A]               
+  val latch = new CountDownLatch(1)              
+  pa(es) { a => ref.set(a); latch.countDown }    // 1
+  latch.await                                    // 2
+  ref.get                                        // 3
+
+// 1. When we receive the value, it sets the result and releases the latch.
+// 2. Waits until the result becomes available and the latch is released
+// 3. Once we’ve passed the latch, we know ref has been set, and we return its val
+```
+
+It should be noted that run **blocks the calling thread while waiting for the latch. It’s not possible to write an implementation of run that doesn’t block**. Since it needs to return a value of type `A`, it needs to wait for that value to become available before it can return. For this reason, we want users of API to avoid calling `run` until they want to wait for a result. We could even go so far as to remove `run` from our API altogether and expose the `apply` method on `Par` instead so users can register asynchronous callbacks. That would certainly be a valid design choice, but we’ll leave our API as it is for now.
+
+Lets look at an example of creating a `Par`. The simplest one is `unit`:
+
+```scala
+/** simply passes value to callback. Executor service isn't needed */
+def unit[A](a: A): Par[A] =
+  es => cb => cb(a)
+```
+
+`unit` already has a value of type `A` available, all it needs to do is call the continuation/callback `cb`, passing it this value. That continuation will release the latch and make the result available immediately.
+
+What about `fork`? The actual parallelism:
+
+```scala
+def fork[A](a: => Par[A]): Par[A] = 
+  es => cb => eval(es)(a(es)(cb)) 
+
+/** A helper function to evaluate an action asynchronously using some ExecutorService */
+def eval(es: ExecutorService)(r: => Unit): Unit =
+  es.submit(new Callable[Unit] { def call = r })
+```
 
 ## Misc Notes
 
@@ -649,3 +685,31 @@ The `@volatile` annotation in Scala ensures that changes to a variable are immed
 ### `algebra`
 
 We do mean `algebra` in the mathematical sense of one or more sets, together with a collection of functions operating on objects of these sets, and a set of axioms. **Axioms are statements assumed to be true from which we can derive other theorems that must also be true**. In our case, the sets are particular types like `Par[A]` and `List[Par[A]]`, and the functions are operations like `map2`, `unit`, and `sequence`.
+
+### AtomicReference / CountDownLatch
+
+`AtomicReference[T]` is a thread-safe wrapper around a reference (object pointer) that **supports atomic read, write, and compare-and-swap (CAS) operations without using locks.** Useful for implementing lock-free, concurrent algorithms where multiple threads need to safely update shared references. The `Ref` from cats effect uses this behind the scene. Common operations:
+
+- `get()` – read the current value
+- `set(value)` – update the value
+- `compareAndSet(expected, newValue)` – update only if the current value matches expected
+
+`CountDownLatch` is a synchronization utility that allows one or more threads to wait until a set of operations in other threads completes.
+
+- Initialized with a count.
+- `countDown()` decrements the count.
+- `await()` blocks until the count reaches zero.
+
+```scala
+extension [A](pa: Par[A]) def run(es: ExecutorService): A =
+  val ref = new AtomicReference[A]               
+  val latch = new CountDownLatch(1)              
+  pa(es) { a => ref.set(a); latch.countDown }    // 1
+  latch.await                                    // 2             
+  ref.get                                        // 3
+
+// 1. When we receive the value, it sets the result and releases the latch.
+// 2. Waits until the result becomes available and the latch is released
+// 3. Once we’ve passed the latch, we know ref has been set, and we return its value
+```
+
