@@ -495,7 +495,7 @@ When you find counterexamples like this, you have **two choices:**
 
 #### Can we fix fork to work on fixed-size thread pools
 
-Lets look at a different implementation below. It certainly avoids deadlock. The only problem is that we aren’t actually forking a separate logical thread to evaluate `fa`. So `fork(hugeComputation)(es)` for some `ExecutorService es` **would run hugeComputation in the main thread**, which is exactly what we wanted to avoid by calling `fork`. 
+Lets look at a different implementation below. It certainly avoids deadlock. The only problem is that we aren’t actually forking a separate logical thread to evaluate `fa`. So `fork(hugeComputation)(es)` for some, `ExecutorService es`, **would run hugeComputation in the main thread**, which is exactly what we wanted to avoid by calling `fork`. 
 
 This is still a *useful combinator*, though, since it **lets us delay instantiation of a computation until it’s actually needed**. Let’s give it the name `delay`:
 
@@ -507,9 +507,28 @@ def delay[A](fa: => Par[A]): Par[A] =
 
 But we’d really like to be able to **run arbitrary computations over fixed-size thread pools. To do that, we’ll need to pick a different representation of Par.**
 
-#### Fully non-blocking `Par` implementation using actors
+### Fully non-blocking `Par` implementation using actors
 
-???
+The problem with the current representation is that we can't get a value out of a `Future` without the current thread blocking on its `get` method. The representation of `Par` has to be **non-blocking** in the sense that the implementations of `fork` and `map2` must never call a method that blocks the current thread like `Future.get`. We have to respect the laws we have assumed and need to come up with a correct representation.
+
+#### The Basic Idea
+
+Instead of using `java.util.concurrent.Future` which we can get a value of but requires blocking, lets introduce our own version of `Future`, with which we can **register a callback that will be invoked when the result is ready.**
+
+```scala
+opaque type Future[+A] = (A => Unit) => Unit        //1 
+opaque type Par[+A] = ExecutorService => Future[A]  //2
+// 1. A function that takes a function of type A => Unit as an argument and returns Unit
+// 2. Using our own Future
+```
+
+Rather than calling `get` to obtain the result from our `Future`, this `Future` is an opaque type encapsulating a function that receives another function - one that expects an `A` and returns a `Unit`. The `A => Unit` function is sometimes called a **continuation** or a **callback**.
+
+With this encoding, when we apply an `ExecutorService` to the function representation a `Par[A]`, we get back a new function `(A => Unit) => Unit`. We can then call that by passing a callback that handles the produced `A` value. Our callback will get invoked whenver the `A` is computed - not immediately.
+
+The `Future` type we defined here is rather imperative, an `A => Unit`. Such a function can only be useful for executing some side effect using the given `A`, as we certainly aren't using the returned result. Is this still FP? **YES**, because the side effects we use are not observable to code that uses `Par`. Future is **opaque** and the function representation can't be called by outside code. The notion of **using local effects for a pure API** is a common thing. This notion of local effects, observability and subtleties of purity and referential transparency are discussed in greater detail in chapter 14.
+
+With this representation of `Par`, lets look at how we might implement the `run` function first, which we'll change to just return an `A`. Since it goes from `Par[A]` to `A`, it will have to construct a continuation and pass it to the `Future`.
 
 ## Misc Notes
 

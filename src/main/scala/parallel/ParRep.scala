@@ -24,7 +24,6 @@ enum ParRep[A]:
   case Map2[A, B, C](pa: ParRep[A], pb: ParRep[B], f: (A, B) => C)
       extends ParRep[C]
   case Fork[A](source: () => ParRep[A]) extends ParRep[A]
-  case Delay[A](source: () => ParRep[A]) extends ParRep[A]
   case Map2Timeouts[A, B, C](pa: ParRep[A], pb: ParRep[B], f: (A, B) => C)
       extends ParRep[C]
 
@@ -61,7 +60,6 @@ enum ParRep[A]:
     case Map(source, f) => UnitFuture(f(source.run(es).get))
     case Fork(src)      => es.submit(new Callable[A]:
         def call = src().run(es).get)
-    case Delay(src)      => src().run(es)
     case Map2(pa, pb, f) =>
       UnitFuture(f(pa.run(es).get, pb.run(es).get))
     case Map2Timeouts(pa, pb, f) =>
@@ -78,8 +76,6 @@ enum ParRep[A]:
       println("Map"); UnitFuture(f(src.traceRun(es).get))
     case Fork(src) =>
       println("Fork → submit"); src().traceRun(es)
-    case Delay(src) =>
-      println("Delay"); src().traceRun(es)
     case Map2(pa, pb, f) =>
       println("Map2"); UnitFuture(f(pa.run(es).get, pb.run(es).get))
     case Map2Timeouts(pa, pb, f) =>
@@ -93,9 +89,6 @@ object ParRep:
     * until forced by `run`.
     */
   def fork[A](a: => ParRep[A]): ParRep[A] = Fork(() => a)
-
-  /** delay instantiation of a computation until it’s actually needed */
-  def delay[A](fa: => ParRep[A]): ParRep[A] = Delay(() => fa)
 
   /** Wraps a by-name value `a` into a `ParRep` that evaluates it in a separate
     * thread via `fork(unit(a))`.
