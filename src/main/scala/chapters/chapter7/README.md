@@ -385,6 +385,8 @@ We can get far just by writing down the type signature for an operation we want 
 
 Up until now, we’ve been reasoning somewhat informally about our API. Let's take a step back and formalize what laws we expect to hold (or would like to hold) for your API. Actually writing these down and making them precise can highlight design choices that wouldn’t be otherwise apparent when reasoning informally. **Like any design choice, choosing laws has consequences; it places constraints on what the operations can mean, determines what implementation choices are possible, and affects what other properties can be true.**
 
+Giving our APIs an algebra with laws that are meaningful and aid reasoning makes the APIs more usable for clients but also means we can treat the objects of our APIs as black boxes. As we’ll see in part 3, this is crucial for our ability to factor out common patterns across the different libraries we’ve written.
+
 ### The Law of Mapping
 
 Lets look at an example in which we'll make up a possible law that seems reasonable.
@@ -441,6 +443,59 @@ fork(x) == x
 #### Breaking the law: A subtle bug
 
 We're expecting `fork(x) == x` for all choices of `x` and any choice of `ExecutorService`. We know `x` is some expression making use of fork, unit, map2 and other combinators derived from these. What about `ExecutorService`? What are some possible impl of it? Theres a good listing of different implementations in the class `java.util.concurrent.Executors`. [See More](http://mng.bz/urQd)
+
+When using an `ExecutorService` backed by a thread pool of bounded size, it’s very easy to run into a **deadlock**. Suppose we have an `ExecutorService` backed by a thread pool, where the maximum number of threads is 1.
+
+```scala
+val a = lazyUnit(42 + 1) // is same as fork(unit(42 + 1))
+val es = Executors.newFixedThreadPool(1)
+println(Par.equal(es)(a, fork(a)))
+```
+
+Most implementations of fork will result in this code deadlocking. 
+
+```scala
+// our current impls
+def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
+def fork[A](a: => Par[A]): Par[A] =
+  es => es.submit(new Callable[A] { def call = a(es).get })   
+```
+
+Note that we’re submitting the `Callable` first, and within that `Callable` we’re submitting another `Callable` to the `ExecutorService` and blocking on its result (recall that `a(es)` will submit a `Callable` to the `ExecutorService` and `get` back a `Future`). **This is a problem if our thread pool has size 1.** 
+
+So `lazyUnit(42 + 1) = fork(unit(42 + 1))`. So on `Par.equal` line, `fork(a) = fork(fork(unit(43)))`. 
+
+The outer `Callable` gets submitted and picked up by the sole thread; within that thread, before it will complete, we submit and block waiting for the result of another `Callable`, but **there are no threads available to run this `Callable`**. They’re waiting on each other, and deadlocks.
+
+---
+**AI EXPLANATION**
+
+`lazyUnit(42 + 1) = fork(unit(43))` — that's what a is.
+
+Now `fork(a) = fork(fork(unit(43)))`. That's just substituting `a` with what it is. Two nested forks around `unit(43)`.
+
+So when you call `fork(a).run(es)` on a single-thread pool:
+
+1. Outer fork submits a task → thread picks it up
+2. Thread runs `a(es).get` → which evaluates `fork(unit(43))(es)`. That submits another task
+3. Thread blocks on `.get()` waiting for that inner task's result
+4. But the pool is full — the thread is the only thread, and it's busy waiting
+5. Inner task never runs → **deadlock**
+
+--- 
+
+When you find counterexamples like this, you have **two choices:** 
+
+1. fix implementation such that the law holds
+2. refine law to state more explicitly the conditions under which it holds (could simply stipulate that it requires thread pools that can grow unbounded)
+
+#### Can we fix fork to work on fixed-size thread pools
+
+Lets look at a different implementation: 
+
+```scala
+???
+```
 
 ## Misc Notes
 
