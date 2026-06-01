@@ -6,7 +6,4 @@ See [executors](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/E
 
 ## Solution
 
-```scala
-
-
-```
+Consider what happens when using a fixed thread pool with only a single thread. This is explored in greater detail in the `README.md` of this chapter in greater detail right after this exercise in the book
