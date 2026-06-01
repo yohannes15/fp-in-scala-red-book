@@ -6,6 +6,11 @@ import java.util.concurrent.*
   * opaque function. This allows pattern matching in combinators like `map` to
   * apply optimizations such as map fusion.
   *
+  * [[ParRep[A]]] is a description of a parallel computation that gets turned
+  * into a result when you call run. It is an inspectable tree of parallel
+  * operations that, when interpreted, produces an A — a first-class program
+  * that separates what to compute from how to run it.
+  *
   * Compare with the opaque `Par` in [[Par]], where `y.map(g).map(f)` creates
   * two opaque closures. Here, `map` pattern matches and composes functions:
   * {{{
