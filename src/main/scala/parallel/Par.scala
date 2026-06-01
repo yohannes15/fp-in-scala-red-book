@@ -58,6 +58,9 @@ object Par:
           def call = a(es).get
       )
 
+  def delay[A](fa: => Par[A]): Par[A] =
+    es => fa(es)
+
   /** convert any A => B to one that evaluates its result asynchronously */
   def asyncF[A, B](f: A => B): A => Par[B] =
     a => lazyUnit(f(a))

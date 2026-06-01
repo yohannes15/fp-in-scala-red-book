@@ -482,6 +482,10 @@ So when you call `fork(a).run(es)` on a single-thread pool:
 4. But the pool is full — the thread is the only thread, and it's busy waiting
 5. Inner task never runs → **deadlock**
 
+**Book Solution**
+
+Any fixed-size thread pool can be deadlocked by running an expression of the form `fork(fork(fork(x)))`, where **there’s at least one more fork than there are threads in the pool**. Each thread in the pool blocks on the call to .get, resulting in all threads being blocked, while one more logical thread is waiting to run and, hence, resolve all the waiting.
+
 --- 
 
 When you find counterexamples like this, you have **two choices:** 
@@ -491,11 +495,21 @@ When you find counterexamples like this, you have **two choices:**
 
 #### Can we fix fork to work on fixed-size thread pools
 
-Lets look at a different implementation: 
+Lets look at a different implementation below. It certainly avoids deadlock. The only problem is that we aren’t actually forking a separate logical thread to evaluate `fa`. So `fork(hugeComputation)(es)` for some `ExecutorService es` **would run hugeComputation in the main thread**, which is exactly what we wanted to avoid by calling `fork`. 
+
+This is still a *useful combinator*, though, since it **lets us delay instantiation of a computation until it’s actually needed**. Let’s give it the name `delay`:
 
 ```scala
-???
+// renamed from fork to delay. This won't work but atleast we got a useful combinator
+def delay[A](fa: => Par[A]): Par[A] =
+  es => fa(es)
 ```
+
+But we’d really like to be able to **run arbitrary computations over fixed-size thread pools. To do that, we’ll need to pick a different representation of Par.**
+
+#### Fully non-blocking `Par` implementation using actors
+
+???
 
 ## Misc Notes
 
