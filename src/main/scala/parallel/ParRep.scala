@@ -152,6 +152,6 @@ object ParRepExamples:
     parList.map(_.sorted)
 
   def totalNumberOfWords(paragraphs: List[String]): ParRep[Int] =
-    ParRep.parFoldMap(paragraphs.toIndexedSeq)(0)(
-      _.split("\\s+").size
-    )(_ + _)
+    ParRep.parFoldMap(
+      paragraphs.toIndexedSeq
+    )(0)(_.split("\\s+").size)(_ + _)
