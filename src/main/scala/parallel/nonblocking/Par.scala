@@ -19,6 +19,9 @@ object Par:
   def unit[A](a: A): Par[A] =
     es => cb => cb(a)
 
+  /** eval forks off the evaluation of a and returns immediately. The callback
+    * will be invoked asynchronously on another thread.
+    */
   def fork[A](a: => Par[A]): Par[A] =
     es => cb => eval(es)(a(es)(cb))
 

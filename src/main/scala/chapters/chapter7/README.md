@@ -558,6 +558,7 @@ def unit[A](a: A): Par[A] =
 What about `fork`? The actual parallelism:
 
 ```scala
+/** eval forks off the evaluation of a and returns immediately. The callback will be invoked asynchronously on another thread. */
 def fork[A](a: => Par[A]): Par[A] = 
   es => cb => eval(es)(a(es)(cb)) 
 
@@ -565,6 +566,45 @@ def fork[A](a: => Par[A]): Par[A] =
 def eval(es: ExecutorService)(r: => Unit): Unit =
   es.submit(new Callable[Unit] { def call = r })
 ```
+
+When the `Future` returned by `fork` receives its continuation `cb`, it will `fork` off a task to evaluate the by-name argument `a`. Once the argument has been evaluated and called to produce a `Future[A]` we register `cb` to be invoked when that `Future` has its resulting `A`.
+
+What about `map2`? Recall the signature:
+
+```scala
+def map2[B, C](pb: Par[B])(f: (A, B) => C): Par[C]
+```
+
+Here a non-blocking implementation is considerably trickier. Conceptually, we’d like `map2` to run both `Par` arguments in parallel. When both results have arrived, we want to invoke `f` and then pass the resulting `C` to the continuation. But there are several race conditions to worry about here, and a correct non-blocking implementation is difficult using only the low-level primitives of `java.util.concurrent`.
+
+#### Intro to Actors
+
+To implement `map2`, we'll use a non-blocking concurrency primitive, called an `actor`. An `Actor` is essentially **a concurrent process that doesn't constantly occupy a thread. Instead, it only occupies a thread when it receives a message. Importantly, although multiple threads may be concurrently sending messages to an actor, the actor processes only one message at a time, queueing other messages for subsequent processing.**
+
+There are various implementations and most would suit our purposes (like Akka) but we are going to use own minimal actor implementation included in `Actor.scala`. Not important to full grasp this but under 100 lines of code. 
+The main trickiness in an actor implementation has to do with the fact that multiple threads may be messaging the actor simultaneously. The implementation needs to ensure messages are processed one at a time as well as that all messages sent to the actor are processed eventually, rather than queued indefinitely.
+
+```scala
+val s = Executors.newFixedThreadPool(4) 
+// s: java.util.concurrent.ExecutorService = ...
+// actor uses an ExecutorService to process messages when they arrive
+
+val echoer = 
+  Actor[String](s): 
+    // a very simple actor - just echoes the String messages it receives
+    msg => println(s"Got message: '$msg'")
+// echoer: Actor[String] = ...
+
+echoer ! "hello"      
+// Got message: 'hello'
+echoer ! "goodbye"    
+// Got message: 'goodbye'
+echoer ! "You're just repeating everything I say, aren't you?"
+// Got message: 'You're just repeating everything I say, aren't you?'
+```
+
+#### Implementing Map2 Via Actors
+
 
 ## Misc Notes
 
