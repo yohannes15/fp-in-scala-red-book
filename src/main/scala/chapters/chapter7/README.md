@@ -641,7 +641,18 @@ val x = p.run(Executors.newFixedThreadPool(2))
 // 4271247461903, 3.0, 3.1622776601683795, 3.3166247903554, 3.46410...
 ```
 
-Above example will call `fork` about 100,000 times, starting about 100,000 actors and combining the results two at a time. Thanks to our non-blocking Actor implementation, we don’t need 100,000 JVM threads.
+Above example will call `fork` about 100,000 times, starting about 100,000 actors and combining the results two at a time. Thanks to our non-blocking Actor implementation, we don’t need 100,000 JVM threads. Perfect **our law now holds for fixed-size thread pools**.
+
+There are multiple approaches you can consider when choosing laws for your API:
+
+1. Think about conceptual model and reason from there to postulate laws that should hold
+2. Invent laws that might be useful or instructive (live `fork`) and see if its sensible for our model
+3. **WEAKEST** - Look at implementation and come up with lawys you expect to hold based on that 
+
+## Refining combinators to their most general form
+
+
+
 ## Misc Notes
 
 ### Problem with using concurrency primitives directly
