@@ -1,4 +1,4 @@
-package fpinscala.answers.parallelism
+package parallel.nonblocking
 
 import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 import java.util.concurrent.{Callable, ExecutorService}

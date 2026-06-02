@@ -605,7 +605,43 @@ echoer ! "You're just repeating everything I say, aren't you?"
 
 #### Implementing Map2 Via Actors
 
+We can implement `map2` using an `Actor` to collect the result from both arguments. Code is straightforward and no race conditions to worry about since we know the `Actor` will process one message at a time.
 
+```scala
+def map2[B, C](pb: Par[B])(f: (A, B) => C): Par[C] = 
+  es => cb => 
+    var ar: Option[A] = None                                // 1
+    var br: Option[B] = None
+    // this implementation is a little too liberal in forking of threads -
+    // it forks a new logical thread for the actor and for stack-safety,
+    // forks evaluation of the callback `cb`
+    val combiner = Actor[Either[A, B]](es):                 // 2
+      case Left(a) =>
+        if br.isDefined then eval(es)(cb(f(a, br.get)))
+        else ar = Some(a)
+      case Right(b) =>
+        if ar.isDefined then eval(es)(cb(f(ar.get, b)))
+    
+    p(es)(a => combiner ! Left(a))                          // 3
+    p2(es)(b => combiner ! Right(b))
+// 1. Two mutable vars are used to store the two results.
+// 2. An actor that awaits both results, combines them with f, and passes the result to cb
+// 3. Passes the actor as a continuation to both sides. On the A side, we wrap the result 
+//    in Left, and on the B side, we wrap it in Right. These are the constructors of the 
+//    Either data type, and they serve to indicate to the actor where the result came from.
+```
+
+Given these implementations, we should now be able to run `Par` values of arbitrary complexity, without having to worry about running out of threads, even if the actors only have access to a single JVM thread.
+
+```scala
+val p = Par.parMap(List.range(1, 100000))(math.sqrt(_))
+val x = p.run(Executors.newFixedThreadPool(2))
+// x: List[Double] = List(1.0, 1.4142135623730951, 1.7320508075688772,
+// 2.0, 2.23606797749979, 2.449489742783178, 2.6457513110645907, 2.828
+// 4271247461903, 3.0, 3.1622776601683795, 3.3166247903554, 3.46410...
+```
+
+Above example will call `fork` about 100,000 times, starting about 100,000 actors and combining the results two at a time. Thanks to our non-blocking Actor implementation, we don’t need 100,000 JVM threads.
 ## Misc Notes
 
 ### Problem with using concurrency primitives directly
