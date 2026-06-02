@@ -9,6 +9,7 @@
       "version": "17"
     },
     "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/node:1": {},
   },
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "mounts": [
