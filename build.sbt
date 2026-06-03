@@ -19,6 +19,8 @@ lazy val root = (project in file("."))
       "org.typelevel" %% "cats-effect" % "3.7.0",
       "org.typelevel" %% "cats-effect-std" % "3.5.3",
       "org.typelevel" %% "munit-cats-effect" % "2.2.0" % Test,
+      "org.scalacheck" %% "scalacheck" % "1.19.0" % Test,
+      "org.scalatest" %% "scalatest" % "3.2.19" % Test,
       "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion
