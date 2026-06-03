@@ -701,10 +701,37 @@ Is `flatMap` really the most primitive possible function, or can we generalize f
 We call it `join`, since conceptually, it’s a parallel computation that, when run, will execute the inner computation, wait for it to finish (much like **Thread.join**), and then return its result.
 
 ```scala
-def join[A](ppa: Par[Par[A]]): Par[A] = 
-  
+def join[A](ppa: Par[Par[A]]): Par[A] =
+  es => cb => ppa(es)(pa => eval(es)(pa(es)(cb)))
+
+def joinViaFlatMap[A](ppa: Par[Par[A]]): Par[A] =
+  ppa.flatMap(identity)
+
+def flatMapViaJoin[A, B](pa: Par[A])(f: A => Par[B]): Par[B] =
+  join(pa.map(f)) 
 ```
 
+#### Recognizing the expressiveness and limitations of an algebra
+
+In the preceding example, it may not have been obvious at first that a function like `choice` **couldn't be expressed purely in terms of `map`, `map2` and `unit`, and it may not have been obvious that `choice` was just a special case of `flatMap`.** Observations like this will come over time with practice and getting better at spotting how to modify your algebra to make some needed combinator expressible. These skills will be helpful for all API design work.
+
+As a practical consideration, **being able to reduce an API to a minimal set of primitive functions is extremely useful.** As noted before when we implemented `parMap` in terms of existing combinators, its frequently the case that primitive combinators encapsulate some rather tricky logic, and reusing them means we don't have to duplicate this logic.
+
+### Conclusion
+
+Chapter 4-6 had strong theme of separation of concerns between description of a computation from the interpreter that then runs it. In this chapter we saw that principle in action in the design of a library that describes parallel computations as values of a data type `Par`, with a separate interpreter `run` to actually spawn the threads to execute them.
+
+#### Summary bulletpoints:
+
+- No existing library is beyong reexamination
+- Simple examples let us focus on essence of problem domain 
+- Parallel and Async computations can be modeled in a pure FP way
+- Building a description of a computation along with a separate interpreter that runs the computations allows computations to be treated as values, which can then be combined with other computations.
+- Conjuring types and implementations, trying to implement those types, adjusting and iterating is part of API design
+- `Par[A]` describes a computation that may evaluate some or all of the computation on multiple threads.
+- Treating an API as an algebra and defining laws that constrain impls are both valuable design tools and an effective testing technique.
+- Partitoning an API into a **minimal set of primitive functions and a set of combinator functions** promotes reuse and understanding.
+- An `Actor` is a non-blocking concurreny primitive based on message passing. Actors are not purely functional but can be used to implement purely functional APIs, as demonstreated with the implementation of map2 for the non-blocking `Par`.
 
 ## Misc Notes
 
