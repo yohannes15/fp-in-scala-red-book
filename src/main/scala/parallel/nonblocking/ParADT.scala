@@ -9,10 +9,10 @@ import java.util.concurrent.atomic.AtomicReference
   */
 enum ParADT[+A]:
   /** Primitive constructors */
-  case Pure(a: A) extends ParADT[A]
-  case Delay(a: () => A) extends ParADT[A]
-  case Fork(pa: () => ParADT[A]) extends ParADT[A]
-  case Async(f: (A => Unit) => Unit) extends ParADT[A]
+  case Pure(a: A)
+  case Delay(a: () => A)
+  case Fork(pa: () => ParADT[A])
+  case Async(f: (A => Unit) => Unit)
   case FlatMap[A, B](source: ParADT[A], f: A => ParADT[B]) extends ParADT[B]
   case Map2[A, B, C](pa: ParADT[A], pb: ParADT[B], f: (A, B) => C)
       extends ParADT[C]
