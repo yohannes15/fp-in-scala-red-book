@@ -81,11 +81,9 @@ parSum.map(_ + 2).map(_ * 2).run(es)
 es.shutdown()
 ```
 
-**Look at `parallel/ParRep.scala`** for full mirror of `Par` but as a data type instead of a opaque type alias of a function.
-
 The key insight: when `map` sees its argument is already a `Map`, it **composes the functions** (`g andThen f`) instead of nesting another `Map`. At evaluation time, `source` runs once and the composed function is applied in one step — no intermediate parallel computation needed.
 
-| Concern | `Par` (opaque function) | `ParRep` (data type) |
+| Concern | `Par` (opaque function) | `ParADT` (data type) |
 |---------|------------------------|---------------------|
 | What is a computation? | A function to call | Data to inspect |
 | Optimization | Impossible (can't see inside) | Rewrite rules on the tree |

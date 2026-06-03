@@ -13,12 +13,12 @@ enum ParADT[+A]:
   case Delay(a: () => A) extends ParADT[A]
   case Fork(pa: () => ParADT[A]) extends ParADT[A]
   case Async(f: (A => Unit) => Unit) extends ParADT[A]
-  case FlatMap[X, A](source: ParADT[X], f: X => ParADT[A]) extends ParADT[A]
-  case Map2[X, Y, A](pa: ParADT[X], pb: ParADT[Y], f: (X, Y) => A)
-      extends ParADT[A]
+  case FlatMap[A, B](source: ParADT[A], f: A => ParADT[B]) extends ParADT[B]
+  case Map2[A, B, C](pa: ParADT[A], pb: ParADT[B], f: (A, B) => C)
+      extends ParADT[C]
 
   /** Derived combinators */
-  def map[B](f: A => B): ParADT[B] = FlatMap(this, (a: A) => ParADT.Pure(f(a)))
+  def map[B](f: A => B): ParADT[B] = FlatMap(this, a => ParADT.Pure(f(a)))
 
   def flatMap[B](f: A => ParADT[B]): ParADT[B] = FlatMap(this, f)
 
