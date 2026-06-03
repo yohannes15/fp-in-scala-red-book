@@ -100,3 +100,34 @@ object Par:
 
   def parMap[A, B](as: IndexedSeq[A])(f: A => B): Par[IndexedSeq[B]] =
     sequenceBalanced(as.map(asyncF(f)))
+
+  def choice[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+    es =>
+      cb =>
+        cond(es) { b =>
+          if b then eval(es) { t(es)(cb) } else eval(es)(f(es)(cb))
+        }
+
+  def choiceN[A](p: Par[Int])(ps: List[Par[A]]): Par[A] =
+    es => cb => p(es)(i => eval(es)(ps(i % ps.length)(es)(cb)))
+
+  def choiceViaChoiceN[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+    choiceN(cond.map(b => if b then 0 else 1))(List(t, f))
+
+  def choiceMap[K, V](key: Par[K])(choices: Map[K, Par[V]]): Par[V] =
+    es => cb => key(es)(k => eval(es)(choices(k)(es)(cb)))
+
+  def choiceViaFlatMap[A](p: Par[Boolean])(f: Par[A], t: Par[A]): Par[A] =
+    p.flatMap(b => if b then t else f)
+
+  def choiceNViaFlatMap[A](p: Par[Int])(choices: List[Par[A]]): Par[A] =
+    p.flatMap(i => choices(i))
+
+  def join[A](ppa: Par[Par[A]]): Par[A] =
+    es => cb => ppa(es)(pa => eval(es)(pa(es)(cb)))
+
+  def joinViaFlatMap[A](ppa: Par[Par[A]]): Par[A] =
+    ppa.flatMap(pa => pa)
+
+  def flatMapViaJoin[A, B](pa: Par[A])(f: A => Par[B]): Par[B] =
+    join(pa.map(f))

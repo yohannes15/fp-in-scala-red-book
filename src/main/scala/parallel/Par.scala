@@ -105,6 +105,20 @@ object Par:
       val parR = Par.fork(parFoldMap(r)(z)(f)(g))
       parL.map2(parR)(g)
 
+  def choice[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+    es =>
+      // Notice we are blocking on the result of `cond`.
+      if cond.run(es).get then t(es)
+      else f(es)
+
+  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
+    es =>
+      val ind = n.run(es).get % choices.size 
+      choices(ind).run(es)
+
+  def choiceViaChoiceN[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+    choiceN(cond.map(b => if b then 0 else 1))(List(t, f))
+
   def max(ints: IndexedSeq[Int]): Par[Int] =
     parFold(ints)(Int.MinValue)(_ max _)
 

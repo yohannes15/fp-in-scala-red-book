@@ -26,6 +26,7 @@ enum ParRep[A]:
   case Fork[A](source: () => ParRep[A]) extends ParRep[A]
   case Map2Timeouts[A, B, C](pa: ParRep[A], pb: ParRep[B], f: (A, B) => C)
       extends ParRep[C]
+  case ChoiceN[A](p: ParRep[Int], ps: List[Par[A]]) extends ParRep[A]
 
   /** map with fusion: if this is already a `Map`, compose functions instead of
     * nesting another layer.
@@ -64,6 +65,9 @@ enum ParRep[A]:
       UnitFuture(f(pa.run(es).get, pb.run(es).get))
     case Map2Timeouts(pa, pb, f) =>
       Map2Future(pa.run(es), pb.run(es), f)
+    case ChoiceN(p, ps) =>
+      val index = p.run(es).get % ps.size
+      ps(index).run(es)
 
   /** A data type separates description from execution. The tree of operations
     * can be inspected, rewritten, and optimized before `run` touches an
@@ -80,6 +84,8 @@ enum ParRep[A]:
       println("Map2"); UnitFuture(f(pa.run(es).get, pb.run(es).get))
     case Map2Timeouts(pa, pb, f) =>
       println("Map2Timeouts"); Map2Future(pa.run(es), pb.run(es), f)
+    case ChoiceN(p, ps) =>
+      println("ChoiceN"); val idx = p.run(es).get % ps.size; ps(idx).run(es)
 
 object ParRep:
   /** Promotes a constant value to a parallel computation. */

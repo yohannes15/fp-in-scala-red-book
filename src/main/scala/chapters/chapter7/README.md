@@ -651,6 +651,59 @@ There are multiple approaches you can consider when choosing laws for your API:
 
 ## Refining combinators to their most general form
 
+It’s a good idea to see if you can refine the combinators you need to its most general form. Suppose we want a function to choose between two forking computations based on the result of an initial computation.
+
+`p(es){ result => ... }` for some ExecutorService `es` and some Par `p`, is the idiom for running `p` and registering a callback to be invoked when its `result` is available. If hard to follow, write down the type of each subexpression and follow the types through the implementation. 
+
+What is the type of `p(es)`? `t(es)`? or `t(es)(cb)`
+
+```scala
+def choice[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+  es =>
+    cb =>
+      cond(es) { b =>
+        if b then eval(es)(t(es)(cb)) else eval(es)(f(es)(cb))
+      }
+
+def choiceN[A](p: Par[Int])(ps: List[Par[A]]): Par[A] =
+  es =>
+    cb =>
+      p(es) { i => eval(es)(ps(i % ps.length)(es)(cb)) }
+
+def choiceViaChoiceN[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+  choiceN(cond.map(b => if b then 0 else 1))(List(t, f))
+```
+
+Does it matter what short of container we have? What we if we have a `Map` of computations instead of list? Yes we can and it barely is different.
+
+```scala
+def choiceMap[K, V](key: Par[K])(choices: Map[K, Par[V]]): Par[V] =
+  es => cb => key(es)(k => eval(es)(choices(k)(es)(cb)))
+```
+
+We can notice for `choice`. we were really doing `Boolean => A`, for `choiceN`, we were doing `Int => Par[A]`. We can make a more general signature that unifies them all, but wait it matches `flatMap`s signature :) 
+
+```scala
+/* `chooser` is usually called `flatMap` or `bind`. */
+def chooser[B](f: A => Par[B]): Par[B] =
+  p.flatMap(f)
+
+def flatMap[B](f: A => Par[B]): Par[B] =
+  // Note: fork isn't strictly necessary but lets us avoid stack overflows
+  // when chaining lots of flatMap calls - we use this stack safety in part 4
+  fork(es => cb => pa(es)(a => f(a)(es)(cb)))
+```
+
+Whenever you generalize functions like this, take a look at the generalized function when you’re finished. Although the function may have been motivated by some specific use case, the signature and implementation may have a more general meaning. In this case, `chooser` is perhaps no longer the most appropriate name for this operation, which is actually quite general—**it’s a parallel computation that, when run, will run an initial computation whose result is used to determine a second computation.This function, which comes up often in functional libraries, is usually called `bind` or `flatMap`.**
+
+Is `flatMap` really the most primitive possible function, or can we generalize further? `flatMap` is suggestive of the fact that this operation maps `A => Par[B]` over our `Par[A]` generating a `Par[Par[B]]` but then also flattens this nested to a `Par[B]`. It suggested all we needed to do was add an even simpler combinator - lets call it `join` - for converting a `Par[Par[X]]` to a `Par[X]` for any choice of X.
+
+We call it `join`, since conceptually, it’s a parallel computation that, when run, will execute the inner computation, wait for it to finish (much like **Thread.join**), and then return its result.
+
+```scala
+def join[A](ppa: Par[Par[A]]): Par[A] = 
+  
+```
 
 
 ## Misc Notes
